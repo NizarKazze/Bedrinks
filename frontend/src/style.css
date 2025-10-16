@@ -1,0 +1,35 @@
+:root {
+  --main-color: #f6a033;
+  --secondary-color: #fbf4e7;
+  --bg-color: #ffffff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.product-item {
+    border: 1px solid var(--main-color);
+    background-color: var(--bg-color);
+    border-radius: 8px;
+}
+
+#Btn-add-product button {
+    background-color: var(--main-color);
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+}
+
+/* =========== InsertProduct ==========*/
+
+#new-product-content label {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#new-product-content input, textarea {
+    border-radius: 8px;
+    border: 2px solid var(--main-color);
+}
