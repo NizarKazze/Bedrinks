@@ -21,12 +21,8 @@ switch ($action) {
     case 'wineries':
         echo json_encode(get_wineries());
         break;
-    case 'type':
-        echo json_encode(get_types());
-        break;
-    case 'subtype':
-        $id_type = isset($_GET['id_type']) ? (int) $_GET['id_type'] : null;
-        echo json_encode(get_subtype($id_type));
+    case 'category':
+        echo json_encode(get_category());
         break;
     case 'products':
         $filters = $_GET;

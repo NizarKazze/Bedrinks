@@ -22,6 +22,30 @@
     border-radius: 4px;
 }
 
+.text-main-color {
+    color: var(--main-color)    ;
+}
+
+.bg-main-color {
+    background-color: var(--main-color);
+}
+
+/* =========== Main control Panel ======== */
+
+.Btn-category-select {
+    background-color: var(--main-color);
+    border: 1px solid var(--main-color);
+} 
+
+
+.item-container .item-list:hover {
+    border: 2px solid var(--main-color)
+}
+
+.item-container .item-list:hover .btn-edit-container {
+    opacity: 1;
+}
+
 /* =========== InsertProduct ==========*/
 
 #new-product-content label {
