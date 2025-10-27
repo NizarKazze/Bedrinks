@@ -25,34 +25,44 @@ function get_regions() {
     }
 }
 
-/* Obtener todos los tipos */
-function get_types() {
+function get_category() {
     $pdo = Conectiondb();
+
     try {
-        $stmt = $pdo->query("SELECT * FROM type ORDER BY name");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $pdo->query("SELECT id, name, description, parent_id FROM category");
+        $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Convertir a un árbol
+        $tree = build_type_tree($types);
+
+        return $tree;
+
     } catch (PDOException $e) {
         return [];
     }
 }
 
-/* Obtener todos los tipos */
-function get_subtype($id_type = null) {
-    $pdo = Conectiondb();
-    try {
-        if ($id_type === null) {
-            $stmt = $pdo->query("SELECT * FROM subtype ORDER BY name");
-        } else {
-            $stmt = $pdo->prepare("SELECT * FROM subtype WHERE id = :id_type ORDER BY name");
-            $stmt->bindParam(':id_type', $id_type, PDO::PARAM_INT);
-            $stmt->execute();
+// Función recursiva para construir el árbol jerárquico
+function build_type_tree($types, $parent_id = null) {
+    $branch = [];
+
+    foreach ($types as $type) {
+        if ($type['parent_id'] == $parent_id) {
+            $children = build_type_tree($types, $type['id']);
+            if ($children) {
+                $type['children'] = $children;
+            } else {
+                $type['children'] = [];
+            }
+            $branch[] = $type;
         }
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        return [];
     }
-}
 
+    // Orden alfabético opcional
+    usort($branch, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+    return $branch;
+}
 
 /**
  * Obtener todas las denominaciones

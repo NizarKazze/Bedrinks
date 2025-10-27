@@ -54,7 +54,7 @@ const TypeItem = ({ id, name, description }) => {
 
 // Lista principal de Tipos
 const TypeList = () => {
-  const { data, loading, error } = useFetch("backend/filters.php?action=type");
+  const { data, loading, error } = useFetch("backend/filters.php?action=category");
 
   if (loading) return <p>Cargando tipos...</p>;
   if (error) return <p>Error: {error}</p>;

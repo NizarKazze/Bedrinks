@@ -6,10 +6,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/backend': {
-        target: 'http://localhost',
+        target: 'http://localhost:8888/Bedrinks', // tu backend remoto real
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/backend/, '/php_filtros_bebidas/backend'),
+        secure: false, // opcional, útil si el backend usa HTTPS con certificado no válido
+        rewrite: (path) => path.replace(/^\/backend/, '/backend'),
       },
     },
   },
 })
+
