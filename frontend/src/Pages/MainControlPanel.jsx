@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useFetch } from '../Hook/useFetch';
 import { Plus, Trash2, Edit2, Save, X, Wine, MapPin, Award, Package, Building, Tag, Search } from 'lucide-react';
 import Logo from '../assets/BeDrinks-logo.png'
+import { usePopup, PopupProvider } from '../Components/Popup';
 
 const BtnCategorySelect = ({ tab, activeTab, setActiveTab }) => {
   const Icon = tab.icon;
@@ -48,6 +49,7 @@ const Item = ({ item, level = 0 }) => (
     </div>
 
     {/* ========= Subcategory ========== */}
+
     {item.children && item.children.length > 0 && (
       <div className="mt-3">
         {level === 0 && (
@@ -68,9 +70,83 @@ const Item = ({ item, level = 0 }) => (
   </div>
 );
 
+const FormularioEjemplo = ({ onSubmit }) => {
+  const { closePopup } = usePopup();
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+  });
 
-const ControlPanel = () => {
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = () => {
+    if (formData.nombre && formData.description) {
+      if (onSubmit) {
+        onSubmit(formData);
+      }
+      closePopup();
+    } else {
+      alert('Por favor completa todos los campos');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Nombre
+        </label>
+        <input
+          type="text"
+          name="nombre"
+          value={formData.nombre}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Descripción
+        </label>
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={closePopup}
+          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="px-4 py-2 text-white bg-main-color rounded-md  transition-colors"
+        >
+          Enviar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+const ControlPanelApp = () => {
   const [activeTab, setActiveTab] = useState('countries');
+  const { openPopup } = usePopup();
 
   const { data, loading, error } = useFetch(
     `backend/filters.php?action=${activeTab}`
@@ -88,6 +164,13 @@ const ControlPanel = () => {
     { id: 'wineries', label: 'Bodegas', icon: Building },
     { id: 'category', label: 'Categorías', icon: Tag }
   ];
+
+  const abrirFormulario = () => {
+    openPopup(
+      <FormularioEjemplo />,
+      `Añadir ${tabs.find(t => t.id === activeTab).label}`
+    );
+  };
 
   const handleAdd = () => {
   };
@@ -156,6 +239,7 @@ const ControlPanel = () => {
                     <Search />
                   </button>
                   <button
+                  onClick={abrirFormulario}
                     className="px-6 py-3 bg-main-color text-white rounded-lg font-semibold flex items-center gap-2 shadow-md hover:shadow-lg"
                   >
                     <Plus className="w-5 h-5" />
@@ -198,4 +282,10 @@ const ControlPanel = () => {
   );
 };
 
-export default ControlPanel;
+export default function ControlPanel() {
+  return (
+    <PopupProvider>
+      <ControlPanelApp />
+    </PopupProvider>
+  );
+}
