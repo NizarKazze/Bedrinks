@@ -1,9 +1,8 @@
 <?php
 require_once __DIR__ . '/../db/connection.php';
 
-/**
- * Obtener todos los países
- */
+/* =========== Country ============= */
+
 function get_countries() {
     $pdo = Conectiondb();
     try {
@@ -14,7 +13,90 @@ function get_countries() {
     }
 }
 
-/* Obtener todas las regiones */
+function get_country_by_id() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $id = $input['id'] ?? null;
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM country WHERE id = :id");
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+function delete_country($id, $force = false) {
+    $pdo = Conectiondb();
+    try {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM region WHERE country_id = :id");
+        $check->execute([':id' => $id]);
+        $count = $check->fetchColumn();
+
+        if ($count > 0 && !$force) {
+            return ['warning' => "There are $count regions linked to this country. Use force = true to delete them as well."];
+        }
+
+        if ($count > 0 && $force) {
+            $pdo->prepare("DELETE FROM region WHERE country_id = :id")->execute([':id' => $id]);
+        }
+
+        $pdo->prepare("DELETE FROM country WHERE id = :id")->execute([':id' => $id]);
+        return true;
+    } catch (PDOException $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
+function insert_country() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $name = trim($input['name'] ?? '');
+    $description = $input['description'] ?? null;
+
+    if (empty($name)) {
+        return ['error' => 'Country name is required'];
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO country (name, description) VALUES (:name, :description)");
+        $stmt->execute([':name' => $name, ':description' => $description]);
+        return ['success' => true, 'id' => $pdo->lastInsertId()];
+    } catch (PDOException $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
+
+function update_country() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $id = $input['id'];
+    $name = trim($input['name'] ?? '');
+    $description = $input['description'] ?? null;
+
+    try {
+        $stmt = $pdo->prepare("UPDATE country SET name = :name, description = :description WHERE id = :id");
+        $stmt->execute([':name' => $name, ':description' => $description, ':id' => $id]);
+        return true;
+    } catch (PDOException $e) { return ['error' => $e->getMessage()]; }
+}
+
+
+
+/* ============= Regions ============ */
+
 function get_regions() {
     $pdo = Conectiondb();
     try {
@@ -24,6 +106,38 @@ function get_regions() {
         return [];
     }
 }
+
+function insert_region() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $country_id = $input['country_id'] ?? null;
+    $name = trim($input['name'] ?? '');
+    $description = $input['description'] ?? null;
+
+    if (empty($name)) {
+        return ['error' => 'Region name is required'];
+    }
+
+    if (empty($country_id)) {
+        return ['error' => 'Country ID is required'];
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO region (name, description, country_id) VALUES (:name, :description, :country_id)");
+        $stmt->execute([
+            ':name' => $name,
+            ':description' => $description,
+            ':country_id' => $country_id
+        ]);
+        return ['success' => true, 'id' => $pdo->lastInsertId()];
+    } catch (PDOException $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
 
 function get_category() {
     $pdo = Conectiondb();

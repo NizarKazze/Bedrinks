@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { useFetch } from '../Hook/useFetch';
+import { usePost } from '../Hook/usePost';
 import { Plus, Trash2, Edit2, Save, X, Wine, MapPin, Award, Package, Building, Tag, Search } from 'lucide-react';
 import Logo from '../assets/BeDrinks-logo.png'
 import { usePopup, PopupProvider } from '../Components/Popup';
 
-const BtnCategorySelect = ({ tab, activeTab, setActiveTab }) => {
+import { InsertCountryForm, UpdateCountryForm } from '../Components/Country';
+import { InsertRegionForm } from '../Components/Regions';
+
+const BtnCategorySelect = ({ tab, activeTab, setActiveTab}) => {
   const Icon = tab.icon;
   return (
     <button
@@ -22,7 +26,7 @@ const BtnCategorySelect = ({ tab, activeTab, setActiveTab }) => {
   );
 };
 
-const Item = ({ item, level = 0 }) => (
+export const Item = ({ item, level = 0, updateForm, deleteItem}) => (
   <div className='item-container mr-2'>
 
     <div 
@@ -39,10 +43,10 @@ const Item = ({ item, level = 0 }) => (
       
       <div className="btn-edit-container flex gap-2 opacity-0">
         <button className="p-2 bg-main-color text-white rounded-lg">
-          <Edit2 className="w-4 h-4" />
+          <Edit2 className="w-4 h-4" onClick={updateForm}/>
         </button>
         <button className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" onClick={deleteItem} />
         </button>
       </div>
 
@@ -70,122 +74,76 @@ const Item = ({ item, level = 0 }) => (
   </div>
 );
 
-const FormularioEjemplo = ({ onSubmit }) => {
-  const { closePopup } = usePopup();
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-  });
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = () => {
-    if (formData.nombre && formData.description) {
-      if (onSubmit) {
-        onSubmit(formData);
-      }
-      closePopup();
-    } else {
-      alert('Por favor completa todos los campos');
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nombre
-        </label>
-        <input
-          type="text"
-          name="nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Descripción
-        </label>
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <div className="flex gap-2 justify-end">
-        <button
-          type="button"
-          onClick={closePopup}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="px-4 py-2 text-white bg-main-color rounded-md  transition-colors"
-        >
-          Enviar
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
 const ControlPanelApp = () => {
   const [activeTab, setActiveTab] = useState('countries');
   const { openPopup } = usePopup();
 
-  const { data, loading, error } = useFetch(
+  const { data, loading, error, refetch } = useFetch(
     `backend/filters.php?action=${activeTab}`
   );
 
-  const [newItem, setNewItem] = useState('');
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editValue, setEditValue] = useState('');
+  const OpenInsertCountryForm = () => {
+    openPopup(
+      <InsertCountryForm onSuccess={() => refetch()}/>,
+      `Añadir ${tabs.find(t => t.id === activeTab).label}`
+    );
+  };
+
+  const UpdateInsertCountryForm = (countryId) => {
+    openPopup(
+      <UpdateCountryForm countryId={countryId} onSuccess={() => refetch()}/>,
+      `Actualizar ${tabs.find(t => t.id === activeTab).label}`
+    );
+  };
+
+  const { send: deleteCountrySend } = usePost("backend/filters.php?action=delete_country");
+
+  const OpenInsertRegionForm = () => {
+    openPopup(
+      <InsertRegionForm />,
+      `Añadir ${tabs.find(t => t.id === activeTab).label}`
+    );
+  };
+
+  const deleteCountry = (id) => {
+    // Primer intento sin force
+    deleteCountrySend({ id })
+      .then((response) => {
+        // Si hay warning, preguntar al usuario
+        if (response.warning) {
+          const confirmed = window.confirm(
+            `${response.warning}\n\n¿Deseas eliminar el país y todas sus regiones vinculadas?`
+          );
+          
+          if (confirmed) {
+            // Segundo intento con force=true
+            deleteCountrySend({ id, force: true })
+              .then(() => {
+                refetch();
+                alert('País eliminado exitosamente');
+              })
+              .catch(err => console.error("Error al eliminar:", err));
+          }
+        } else if (response.error) {
+          alert('Error: ' + response.error);
+        } else {
+          // Eliminación exitosa
+          refetch();
+          alert('País eliminado exitosamente');
+        }
+      })
+      .catch(err => console.error("Error al eliminar:", err));
+  };
 
   const tabs = [
-    { id: 'countries', label: 'Países', icon: MapPin },
-    { id: 'regions', label: 'Regiones', icon: MapPin },
+    { id: 'countries', label: 'Países', icon: MapPin, insertForm: OpenInsertCountryForm, updateForm: UpdateInsertCountryForm, deleteItem: deleteCountry },
+    { id: 'regions', label: 'Regiones', icon: MapPin, insertForm: OpenInsertRegionForm },
     { id: 'denominations', label: 'Denominaciones', icon: Award },
     { id: 'suppliers', label: 'Proveedores', icon: Package },
     { id: 'wineries', label: 'Bodegas', icon: Building },
     { id: 'category', label: 'Categorías', icon: Tag }
   ];
 
-  const abrirFormulario = () => {
-    openPopup(
-      <FormularioEjemplo />,
-      `Añadir ${tabs.find(t => t.id === activeTab).label}`
-    );
-  };
-
-  const handleAdd = () => {
-  };
-
-  const handleDelete = (index) => {
-  };
-
-  const handleEdit = (index) => {
-  };
-
-  const handleSaveEdit = () => {
-  };
-
-  const handleCancelEdit = () => {
-  };
 
   return (
     <div className="content mt-16" id='control-panel'>
@@ -229,7 +187,7 @@ const ControlPanelApp = () => {
                 <div className="flex gap-3">
                   <input
                     type="text"
-                    value={newItem}
+                    value=""
                     placeholder="Buscar Elementos..."
                     className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 focus:outline-none focus:border-purple-500 transition-all"
                   />
@@ -239,7 +197,7 @@ const ControlPanelApp = () => {
                     <Search />
                   </button>
                   <button
-                  onClick={abrirFormulario}
+                  onClick={tabs.find(t => t.id === activeTab).insertForm}
                     className="px-6 py-3 bg-main-color text-white rounded-lg font-semibold flex items-center gap-2 shadow-md hover:shadow-lg"
                   >
                     <Plus className="w-5 h-5" />
@@ -261,7 +219,12 @@ const ControlPanelApp = () => {
                   </div>
                 ) : (
                   data.map((item) => (
-                    <Item key={item.id} item={item} />
+                    <Item 
+                      key={item.id} 
+                      item={item} 
+                      updateForm={() => tabs.find(t => t.id === activeTab).updateForm(item.id)} 
+                      deleteItem={() => tabs.find(t => t.id === activeTab)?.deleteItem?.(item.id)}
+                    />
                   ))
                 )}
 

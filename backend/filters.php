@@ -9,9 +9,27 @@ switch ($action) {
     case 'countries':
         echo json_encode(get_countries());
         break;
+    case 'country_by_id':
+        $id = $_GET;
+        echo json_encode(get_country_by_id($id));
+        break;
+    case 'insert-country':
+        echo json_encode(insert_country());
+        break;
+    case 'update_country':
+        echo json_encode(update_country());
+        break;
+    case 'delete_country':
+        echo json_encode(update_country());
+        break;
+
     case 'regions':
         echo json_encode(get_regions());
         break;
+    case 'insert_region':
+        echo json_encode(insert_region());
+        break;
+
     case 'denominations':
         echo json_encode(get_denominations());
         break;

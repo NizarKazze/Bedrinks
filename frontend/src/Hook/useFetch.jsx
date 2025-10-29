@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export function useFetch(url) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadCounter, setReloadCounter] = useState(0);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!url) return;
 
     setLoading(true);
@@ -29,5 +30,14 @@ export function useFetch(url) {
       });
   }, [url]);
 
-  return { data, loading, error };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, reloadCounter]);
+
+  // Función para recargar datos
+  const refetch = () => {
+    setReloadCounter((prev) => prev + 1);
+  };
+
+  return { data, loading, error, refetch };
 }
