@@ -3,6 +3,9 @@ import { useFetch } from "../Hook/useFetch";
 import { usePost } from "../Hook/usePost";
 import { usePopup } from "./Popup";
 
+import { FormBottom } from "./FormComponents";
+import { FormInput } from "./FormComponents";
+
 const CountryItem = (props) => (
   <div className="product-item w-full p-2 mb-4" id={`country-${props.id}`}>
     <p><strong>Nombre:</strong> {props.name}</p>
@@ -33,13 +36,15 @@ const CountryList = () => {
   );
 };
 
+/* ============= Insert Fetch Form =============== */
+
 export const InsertCountryForm = ({onSuccess}) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
   });
 
-  const { data, loading, error, send } = usePost("backend/filters.php?action=insert-country");
+  const { send } = usePost("backend/filters.php?action=insert-country");
   const { closePopup } = usePopup();
 
   const handleChange = (e) => {
@@ -61,51 +66,17 @@ export const InsertCountryForm = ({onSuccess}) => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nombre
-        </label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Descripción
-        </label>
-        <input
-          type="text"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <FormInput label={"Nombre"} type={"text"} name={"name"} value={formData.name} onChange={handleChange}></FormInput>
+      <FormInput label={"Descripción"} type={"text"} name={"description"} value={formData.description} onChange={handleChange}></FormInput>
 
-      <div className="flex gap-2 justify-end">
-        <button
-          type="button"
-          onClick={closePopup}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="px-4 py-2 text-white bg-main-color rounded-md  transition-colors"
-        >
-          Enviar
-        </button>
-      </div>
+      <FormBottom handleSubmit={handleSubmit} ></FormBottom>
+
     </div>
   );
 }
+
+/* ============= Update Fetch Form =============== */
 
 export const UpdateCountryForm = ({countryId, onSuccess}) => {
   const { data: countryData, loading, error, send: fetchCountry } = usePost(
@@ -159,48 +130,13 @@ export const UpdateCountryForm = ({countryId, onSuccess}) => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nombre
-        </label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Descripción
-        </label>
-        <input
-          type="text"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <FormInput label={"Nombre"} type={"text"} name={"name"} value={formData.name} onChange={handleChange}></FormInput>
+      <FormInput label={"Descripción"} type={"text"} name={"description"} value={formData.description} onChange={handleChange}></FormInput>
 
-      <div className="flex gap-2 justify-end">
-        <button
-          type="button"
-          onClick={closePopup}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="px-4 py-2 text-white bg-main-color rounded-md  transition-colors"
-        >
-          Enviar
-        </button>
-      </div>
+      <FormBottom handleSubmit={handleSubmit} ></FormBottom>
+
+
     </div>
   );
 }
