@@ -217,13 +217,23 @@ function get_wineries() {
     }
 }
 
+function get_vintages() {
+    $pdo = Conectiondb();
+    try {
+        $stmt = $pdo->query("SELECT id, name, year FROM vintage ORDER BY name");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
 /*
  * Filtrar productos según uno o varios parámetros
  * Ejemplo: get_products(['type_id' => 2, 'denomination_id' => 5]);
  *
  */
 
-function get_products($filters = []) {
+ function get_products($filters = []) {
     $pdo = Conectiondb();
 
     $query = "SELECT p.* FROM product p";
@@ -232,23 +242,49 @@ function get_products($filters = []) {
 
     // Join si filtramos por proveedor
     if (isset($filters['supplier_id'])) {
-        $query .= " INNER JOIN product_supplier ps ON ps.product_id = p.id";
-        $conditions[] = "ps.supplier_id = :supplier_id";
-        $params[':supplier_id'] = $filters['supplier_id'];
+        $query .= " LEFT JOIN product_supplier ps ON ps.product_id = p.id";
+
+        $supplierFilter = $filters['supplier_id'];
+
+        if (is_array($supplierFilter)) {
+            $supplierParamList = [];
+            foreach ($supplierFilter as $index => $singleSupplier) {
+                $paramName = ":supplier_" . $index;
+                $supplierParamList[] = $paramName;
+                $params[$paramName] = $singleSupplier;
+            }
+            $conditions[] = "ps.supplier_id IN (" . implode(',', $supplierParamList) . ")";
+        } else {
+            $conditions[] = "ps.supplier_id = :supplier_id";
+            $params[':supplier_id'] = $supplierFilter;
+        }
     }
 
     // Filtros directos sobre producto
     $map = [
-        'type_id' => 'p.type_id',
+        'category_id' => 'p.category_id',
         'denomination_id' => 'p.denomination_id',
         'winery_id' => 'p.winery_id',
-        'vintage_id' => 'p.vintage_id'
+        'vintage_id' => 'p.vintage_id',
     ];
 
-    foreach ($map as $key => $column) {
-        if (isset($filters[$key])) {
-            $conditions[] = "$column = :$key";
-            $params[":$key"] = $filters[$key];
+    foreach ($map as $filterKey => $columnName) {
+        if (isset($filters[$filterKey])) {
+            $filterValue = $filters[$filterKey];
+
+            if (is_array($filterValue)) {
+                $paramNameList = [];
+                foreach ($filterValue as $index => $singleValue) {
+                    $paramName = ":" . $filterKey . "_" . $index;
+                    $paramNameList[] = $paramName;
+                    $params[$paramName] = $singleValue;
+                }
+                $conditions[] = "$columnName IN (" . implode(',', $paramNameList) . ")";
+            } else {
+                $paramName = ":" . $filterKey;
+                $conditions[] = "$columnName = $paramName";
+                $params[$paramName] = $filterValue;
+            }
         }
     }
 
@@ -259,9 +295,27 @@ function get_products($filters = []) {
     try {
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Devolver productos y depuración
+        return [
+            'filters_received' => $filters,
+            'query_debug' => [
+                'sql' => $query,
+                'params' => $params
+            ],
+            'products' => $products
+        ];
     } catch (PDOException $e) {
-        return ['error' => $e->getMessage()];
+        return [
+            'filters_received' => $filters,
+            'query_debug' => [
+                'sql' => $query,
+                'params' => $params
+            ],
+            'error' => $e->getMessage()
+        ];
     }
 }
+
 ?>

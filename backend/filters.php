@@ -42,8 +42,11 @@ switch ($action) {
     case 'category':
         echo json_encode(get_category());
         break;
+    case 'vintage':
+        echo json_encode(get_vintages());
+        break;
     case 'products':
-        $filters = $_GET;
+        $filters = $_POST + $_GET;
         unset($filters['action']);
         echo json_encode(get_products($filters));
         break;
