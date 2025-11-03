@@ -37,6 +37,8 @@ export default function ProductFilter() {
     supplier_id: []
   });
 
+  console.log(filters)
+
   /* ======= Obtener Datos ======== */
 
   const { data: countryData } = useFetch(
@@ -190,8 +192,7 @@ export default function ProductFilter() {
       }
   
       const data = await res.json();
-      console.log("Respuesta del backend:", data);
-      
+            
       setProducts(data.products);
       setLoading(false);
   
@@ -212,6 +213,47 @@ export default function ProductFilter() {
   };
 
   const totalActiveFilters = Object.values(filters).reduce((acc, arr) => acc + arr.length, 0);
+
+  const fetchSearch = async (table, search) => {
+    try {
+      const params = new URLSearchParams({ table, search });
+      const res = await fetch(`backend/filters.php?action=search_by&${params.toString()}`);
+      const data = await res.json();
+      return data; 
+    } catch (error) {
+      console.error('Error en búsqueda:', error);
+      return [];
+    }
+  };
+  
+
+  const addFilter = (key, items, replace = false) => {
+    setFilters(prev => {
+      const existingIds = new Set(prev[key]);
+  
+      if (replace) {
+        // Si replace es true, solo guardamos los nuevos ids
+        const newIds = items.map(item => item.id);
+        return {
+          ...prev,
+          [key]: newIds
+        };
+      } else {
+        // Añadir sin duplicados
+        const newIds = items
+          .map(item => item.id)
+          .filter(id => !existingIds.has(id));
+        return {
+          ...prev,
+          [key]: [...prev[key], ...newIds]
+        };
+      }
+    });
+  };
+  
+  
+  
+  
 
   const FilterSection = ({ title, filterKey, options, optionsKey }) => (
 
@@ -258,6 +300,8 @@ export default function ProductFilter() {
     </div>
   );
 
+
+
   return (
     <div className="min-h-screen w-3/4 mt-16 mx-auto p-6">
         {/* Header */}
@@ -269,6 +313,8 @@ export default function ProductFilter() {
             <h1 className="text-4xl text-gray-600 border-t-2 pt-4">Panel de Productos</h1>
           </div>
         </div>
+      
+
 
       <div className="">
 
@@ -347,6 +393,12 @@ export default function ProductFilter() {
                 </h2>
               </div>
 
+              <div id='search-container' className='p-4 border-b border-gray-200'>
+                <div id='search-product'>
+                  <input type="text" placeholder='Buscar productos...' className=''/>
+                </div>
+              </div>
+
               {loading ? (
                 <div className="text-center py-16">
                   <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-orange-400"></div>
@@ -366,37 +418,102 @@ export default function ProductFilter() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bodega</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">D.O.</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Añada</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formato</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {products && products.length > 0 ? (
-                        products.map(product => (
-                          <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-4 py-3 text-sm text-gray-500">{product.code}</td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{product.name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('wineries', product.winery_id)}</td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-main-color-50">
-                                {getOptionName('types', product.category_id)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('denominations', product.denomination_id)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('vintages', product.vintage_id)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{product.format}</td>
-                          </tr>
-                        ))
-                      ) : null}
-                    </tbody>
-                  </table>
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th>Código</th>
+                      <th>Nombre</th>
+                      <th>
+                        Bodega
+                        <input
+                          type="text"
+                          className="mt-1 block w-full"
+                          placeholder="Buscar..."
+                          onChange={async (e) => {
+                            const value = e.target.value.trim();
+                            if (value === '') {
+                              setFilters(prev => ({ ...prev, winery_id: [] }));
+                            } else {
+                              const results = await fetchSearch('winery', value);
+                              addFilter('winery_id', results, true);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th>
+                        Tipo
+                        <input
+                          type="text"
+                          className="mt-1 block w-full"
+                          placeholder="Buscar..."
+                          onChange={async (e) => {
+                            const value = e.target.value.trim();
+                            if (value === '') {
+                              setFilters(prev => ({ ...prev, category_id: [] }));
+                            } else {
+                              const results = await fetchSearch('category', value);
+                              addFilter('category_id', results, true);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th>
+                        D.O.
+                        <input
+                          type="text"
+                          className="mt-1 block w-full"
+                          placeholder="Buscar..."
+                          onChange={async (e) => {
+                            const value = e.target.value.trim();
+                            if (value === '') {
+                              setFilters(prev => ({ ...prev, denomination_id: [] }));
+                            } else {
+                              const results = await fetchSearch('denomination', value);
+                              addFilter('denomination_id', results, true);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th>
+                        Añada
+                        <input
+                          type="text"
+                          className="mt-1 block w-full"
+                          placeholder="Buscar..."
+                          onChange={async (e) => {
+                            const value = e.target.value.trim();
+                            if (value === '') {
+                              setFilters(prev => ({ ...prev, vintage_id: [] }));
+                            } else {
+                              const results = await fetchSearch('vintage', value);
+                              addFilter('vintage_id', results, true);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th>Formato</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {products && products.length > 0 ? (
+                      products.map(product => (
+                        <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-gray-500">{product.code}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{product.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('wineries', product.winery_id)}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-main-color-50">
+                              {getOptionName('types', product.category_id)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('denominations', product.denomination_id)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('vintages', product.vintage_id)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{product.format}</td>
+                        </tr>
+                      ))
+                    ) : null}
+                  </tbody>
+                </table>
                 </div>
               )}
             </div>

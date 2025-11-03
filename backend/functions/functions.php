@@ -318,4 +318,52 @@ function get_vintages() {
     }
 }
 
+function search_by_name($table, $search) {
+    $pdo = Conectiondb();
+
+    $allowedTables = ['category', 'vintage', 'winery', 'supplier'];
+
+    if (!in_array($table, $allowedTables)) {
+        return json_encode(['error' => 'Tabla no permitida']);
+    }
+
+    $search = trim($search);
+    $search = strtolower(remove_accents($search));
+
+    try {
+        $sql = "
+            SELECT id, name
+            FROM $table
+            WHERE REPLACE(
+                    LOWER(CONVERT(name USING utf8)),
+                    ' ',
+                    ''
+                ) COLLATE utf8_general_ci
+                LIKE REPLACE(:search, ' ', '')
+            ORDER BY name ASC
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':search' => '%' . $search . '%']);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return json_encode($results, JSON_UNESCAPED_UNICODE);
+    } catch (PDOException $e) {
+        return json_encode(['error' => $e->getMessage()]);
+    }
+}
+
+function remove_accents($str) {
+    $unwanted = [
+        'Á'=>'A','À'=>'A','Â'=>'A','Ä'=>'A','á'=>'a','à'=>'a','ä'=>'a','â'=>'a',
+        'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E','é'=>'e','è'=>'e','ë'=>'e','ê'=>'e',
+        'Í'=>'I','Ì'=>'I','Ï'=>'I','Î'=>'I','í'=>'i','ì'=>'i','ï'=>'i','î'=>'i',
+        'Ó'=>'O','Ò'=>'O','Ö'=>'O','Ô'=>'O','ó'=>'o','ò'=>'o','ö'=>'o','ô'=>'o',
+        'Ú'=>'U','Ù'=>'U','Ü'=>'U','Û'=>'U','ú'=>'u','ù'=>'u','ü'=>'u','û'=>'u',
+        'Ñ'=>'N','ñ'=>'n','Ç'=>'C','ç'=>'c'
+    ];
+    return strtr($str, $unwanted);
+}
+
+
 ?>

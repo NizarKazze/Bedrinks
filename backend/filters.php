@@ -50,6 +50,13 @@ switch ($action) {
         unset($filters['action']);
         echo json_encode(get_products($filters));
         break;
+
+    case 'search_by':
+        $table = $_POST['table'] ?? $_GET['table'] ?? '';
+        $search = $_POST['search'] ?? $_GET['search'] ?? '';
+        echo search_by_name($table, $search);
+        break;
+        
     default:
         echo json_encode(['error' => 'Invalid action']);
 }
