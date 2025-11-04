@@ -139,6 +139,20 @@ CREATE TABLE product_supplier (
 );
 
 -- ========================
+-- 12. customer
+-- ========================
+
+CREATE TABLE customer (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  address TEXT,
+  creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ========================
 -- 13. Indexes
 -- ========================
 CREATE INDEX idx_product_category ON product(category_id);

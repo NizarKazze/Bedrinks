@@ -1,8 +1,51 @@
 import { useState, useEffect } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
+
+const loadingComponent = () => {
+  return (
+    <div className="text-center py-16">
+      <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-orange-400"></div>
+      <p className="mt-4 text-gray-600">Cargando productos...</p>
+    </div>
+  )
+}
+
+const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters, fetchSearch, addFilter }) => {
+  const [searchValue, setSearchValue] = useState("");
+
+  const handleChange = async (e) => {
+    const value = e.target.value;
+    setSearchValue(value);
+
+    const trimmed = value.trim();
+
+    if (trimmed === "") {
+      setFilters(prev => ({ ...prev, [`${item}_id`]: [] }));
+    } else {
+      const results = await fetchSearch(item, trimmed);
+      addFilter(`${item}_id`, results, true);
+    }
+  };
+
+  return (
+    <th className={isHidden(item) ? "hidden" : ""}>
+      {label}
+      {hasInput && (
+        <input
+          type="text"
+          className="mt-1 block w-full"
+          placeholder="Buscar..."
+          value={searchValue}
+          onChange={handleChange}
+        />
+      )}
+    </th>
+  );
+};
+
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -12,14 +55,47 @@ export default function ProductFilter() {
     code: true,
     name: true,
     winery: true,
-    type: true,
+    category: true,
     denomination: true,
     vintage: true,
     format: true,
     price: true
   });
 
+
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  const toggleShowColumn = (columnName) => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      [columnName]: !prev[columnName]
+    }));
+  };
+
+  const showColumnComponent = () => {
+    return (
+      <div className="px-4 pb-4 space-y-2 absolute bg-gray-50 mt-4">
+        {Object.entries(visibleColumns).map(([column, isVisible]) => (
+          <label
+            key={column}
+            className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+          >
+            <input
+              type="checkbox"
+              checked={isVisible}
+              onChange={() => toggleShowColumn(column)}
+              className="w-4 h-4 text-main-color border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="checkbox-btn"></span>
+            <span className="text-gray-700">{column}</span>
+          </label>
+        ))}
+      </div>
+    );
+  };
+
+  const isHidden = (columnName) => !visibleColumns[columnName];
+
 
   const [expandedFilters, setExpandedFilters] = useState({
     category_id: true,
@@ -130,7 +206,7 @@ export default function ProductFilter() {
    * @param {*} filterName 
    * @param {*} value 
    * 
-   * @description Busca si el @param value exsite en filters y lo elimina en caso contrario lo añade
+   * @description Busca si el @param value exsite en filters y lo elimina, en caso contrario lo añade
    * 
    * @returns {void} No devuelve nada pero actualiza el estado filters
    */
@@ -252,9 +328,6 @@ export default function ProductFilter() {
   };
   
   
-  
-  
-
   const FilterSection = ({ title, filterKey, options, optionsKey }) => (
 
     <div className="border-b border-gray-200 last:border-b-0">
@@ -299,6 +372,8 @@ export default function ProductFilter() {
       )}
     </div>
   );
+
+
 
 
 
@@ -393,17 +468,22 @@ export default function ProductFilter() {
                 </h2>
               </div>
 
-              <div id='search-container' className='p-4 border-b border-gray-200'>
+              <div id='search-container' className='p-4 border-b border-gray-200 flex justify-between'>
                 <div id='search-product'>
                   <input type="text" placeholder='Buscar productos...' className=''/>
+                </div>
+                <div>
+                  <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setShowColumnSelector(prev => !prev)}>
+                   <EyeOff /> Ocultar columnas
+                  </button>
+
+                  {showColumnSelector && showColumnComponent()}
                 </div>
               </div>
 
               {loading ? (
-                <div className="text-center py-16">
-                  <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-orange-400"></div>
-                  <p className="mt-4 text-gray-600">Cargando productos...</p>
-                </div>
+
+                <loadingComponent></loadingComponent>
               ) : products && products.length === 0 ? (
                 <div className="text-center py-16">
                   <Wine className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -420,77 +500,66 @@ export default function ProductFilter() {
                   <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th>Código</th>
-                      <th>Nombre</th>
-                      <th>
-                        Bodega
-                        <input
-                          type="text"
-                          className="mt-1 block w-full"
-                          placeholder="Buscar..."
-                          onChange={async (e) => {
-                            const value = e.target.value.trim();
-                            if (value === '') {
-                              setFilters(prev => ({ ...prev, winery_id: [] }));
-                            } else {
-                              const results = await fetchSearch('winery', value);
-                              addFilter('winery_id', results, true);
-                            }
-                          }}
-                        />
-                      </th>
-                      <th>
-                        Tipo
-                        <input
-                          type="text"
-                          className="mt-1 block w-full"
-                          placeholder="Buscar..."
-                          onChange={async (e) => {
-                            const value = e.target.value.trim();
-                            if (value === '') {
-                              setFilters(prev => ({ ...prev, category_id: [] }));
-                            } else {
-                              const results = await fetchSearch('category', value);
-                              addFilter('category_id', results, true);
-                            }
-                          }}
-                        />
-                      </th>
-                      <th>
-                        D.O.
-                        <input
-                          type="text"
-                          className="mt-1 block w-full"
-                          placeholder="Buscar..."
-                          onChange={async (e) => {
-                            const value = e.target.value.trim();
-                            if (value === '') {
-                              setFilters(prev => ({ ...prev, denomination_id: [] }));
-                            } else {
-                              const results = await fetchSearch('denomination', value);
-                              addFilter('denomination_id', results, true);
-                            }
-                          }}
-                        />
-                      </th>
-                      <th>
-                        Añada
-                        <input
-                          type="text"
-                          className="mt-1 block w-full"
-                          placeholder="Buscar..."
-                          onChange={async (e) => {
-                            const value = e.target.value.trim();
-                            if (value === '') {
-                              setFilters(prev => ({ ...prev, vintage_id: [] }));
-                            } else {
-                              const results = await fetchSearch('vintage', value);
-                              addFilter('vintage_id', results, true);
-                            }
-                          }}
-                        />
-                      </th>
-                      <th>Formato</th>
+                      <ProductTableHeader
+                        item="code"
+                        label="Código"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="name"
+                        label="Nombre"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="winery"
+                        label="Bodega"
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="category"
+                        label="Tipo"
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="denomination"
+                        label="D.O."
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="vintage"
+                        label="Añada"
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="format"
+                        label="Formato"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
                     </tr>
                   </thead>
 
@@ -498,17 +567,17 @@ export default function ProductFilter() {
                     {products && products.length > 0 ? (
                       products.map(product => (
                         <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm text-gray-500">{product.code}</td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{product.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('wineries', product.winery_id)}</td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
+                          <td className={`px-4 py-3 text-sm text-gray-900 ${isHidden("name") ? "hidden" : ""}`}>{product.name}</td>
+                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("winery") ? "hidden" : ""}`}>{getOptionName('wineries', product.winery_id)}</td>
+                          <td className={`px-4 py-3 text-sm ${isHidden("category") ? "hidden" : ""}`}>
                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-main-color-50">
                               {getOptionName('types', product.category_id)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('denominations', product.denomination_id)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{getOptionName('vintages', product.vintage_id)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{product.format}</td>
+                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
+                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
+                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
                         </tr>
                       ))
                     ) : null}
