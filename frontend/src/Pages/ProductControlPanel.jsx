@@ -4,6 +4,19 @@ import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
 
+const HeaderPage = () => {
+  return (
+    <div className="mb-10 pb-4 border-b-2 border-gray-200">
+      <div className="flex flex-col gap-3 mb-2">
+        <div id='logo' className='mb-8'>
+          <img src={Logo} alt="Bedrinks" />
+        </div>
+        <h1 className="text-4xl text-gray-600 border-t-2 pt-4">Panel de Productos</h1>
+      </div>
+    </div>
+  )
+}
+
 const LoadingComponent = () => {
   return (
     <div className="text-center py-16">
@@ -107,8 +120,7 @@ export default function ProductFilter() {
 
   const isHidden = (columnName) => !visibleColumns[columnName];
 
-    const [showOrderSelector, setshowOrderSelector] = useState(false);
-
+  const [showOrderSelector, setshowOrderSelector] = useState(false);
 
   const ShowOrderBy = () => {
     return (
@@ -133,7 +145,6 @@ export default function ProductFilter() {
     );
   };
 
-
   const [expandedFilters, setExpandedFilters] = useState({
     category_id: true,
     denomination_id: false,
@@ -141,8 +152,6 @@ export default function ProductFilter() {
     vintage_id: false,
     supplier_id: false
   });
-
-  
 
   const [filters, setFilters] = useState({
     category_id: [],
@@ -416,21 +425,11 @@ export default function ProductFilter() {
 
 
 
-
-
   return (
     <div className="min-h-screen w-3/4 mt-16 mx-auto p-6">
-        {/* Header */}
-        <div className="mb-10 pb-4 border-b-2 border-gray-200">
-          <div className="flex flex-col gap-3 mb-2">
-            <div id='logo' className='mb-8'>
-              <img src={Logo} alt="Bedrinks" />
-            </div>
-            <h1 className="text-4xl text-gray-600 border-t-2 pt-4">Panel de Productos</h1>
-          </div>
-        </div>
-      
 
+      {/* Header */}
+      <HeaderPage></HeaderPage>
 
       <div className="">
 
