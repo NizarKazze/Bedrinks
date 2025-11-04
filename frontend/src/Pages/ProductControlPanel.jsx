@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
+import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff, ArrowUpDown } from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
 
-const loadingComponent = () => {
+const LoadingComponent = () => {
   return (
     <div className="text-center py-16">
       <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-orange-400"></div>
@@ -50,6 +50,7 @@ const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters, fetch
 export default function ProductFilter() {
   const [products, setProducts] = useState()
   const [loading, setLoading] = useState(true)
+  const [orderBy, setOrderBy] = useState('name')
 
   const [visibleColumns, setVisibleColumns] = useState({
     code: true,
@@ -62,7 +63,17 @@ export default function ProductFilter() {
     price: true
   });
 
-
+  const [Columns, setColumns] = useState({
+    code: 'code',
+    name: 'name',
+    winery: 'winery',
+    category: 'category',
+    denomination: 'denomination',
+    vintage: 'vintage',
+    format: 'format',
+    price: 'price'
+  });
+  
   const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   const toggleShowColumn = (columnName) => {
@@ -96,6 +107,32 @@ export default function ProductFilter() {
 
   const isHidden = (columnName) => !visibleColumns[columnName];
 
+    const [showOrderSelector, setshowOrderSelector] = useState(false);
+
+
+  const ShowOrderBy = () => {
+    return (
+      <div className="px-4 pb-4 space-y-2 absolute bg-gray-50 mt-4 shadow rounded">
+        {Object.entries(Columns).map(([column]) => (
+          <label
+            key={column}
+            className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded"
+          >
+            <input
+              type="radio"
+              name="order_by"
+              value={column}
+              checked={orderBy === column}
+              onChange={() => setOrderBy(column)}
+              className="w-4 h-4 text-main-color border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-700 capitalize">{column}</span>
+          </label>
+        ))}
+      </div>
+    );
+  };
+
 
   const [expandedFilters, setExpandedFilters] = useState({
     category_id: true,
@@ -105,6 +142,8 @@ export default function ProductFilter() {
     supplier_id: false
   });
 
+  
+
   const [filters, setFilters] = useState({
     category_id: [],
     denomination_id: [],
@@ -112,8 +151,6 @@ export default function ProductFilter() {
     vintage_id: [],
     supplier_id: []
   });
-
-  console.log(filters)
 
   /* ======= Obtener Datos ======== */
 
@@ -256,6 +293,9 @@ export default function ProductFilter() {
         formData.append(key, value);
       }
     }
+
+    formData.append("order_by", orderBy);
+    formData.append("order_dir", "ASC");
   
     try {
       const res = await fetch("backend/filters.php?action=products", {
@@ -268,6 +308,7 @@ export default function ProductFilter() {
       }
   
       const data = await res.json();
+      console.log(formData)
             
       setProducts(data.products);
       setLoading(false);
@@ -281,7 +322,7 @@ export default function ProductFilter() {
 
   useEffect(() => {
     applyFilters();
-  }, [filters]);
+  }, [filters, orderBy]);
 
   const getOptionName = (category, id) => {
     const option = filterOptions[category]?.find(opt => opt.id === id);
@@ -327,7 +368,7 @@ export default function ProductFilter() {
     });
   };
   
-  
+
   const FilterSection = ({ title, filterKey, options, optionsKey }) => (
 
     <div className="border-b border-gray-200 last:border-b-0">
@@ -472,18 +513,28 @@ export default function ProductFilter() {
                 <div id='search-product'>
                   <input type="text" placeholder='Buscar productos...' className=''/>
                 </div>
-                <div>
-                  <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setShowColumnSelector(prev => !prev)}>
-                   <EyeOff /> Ocultar columnas
-                  </button>
+                <div className='flex gap-2'>
+                  <div >
+                    <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setShowColumnSelector(prev => !prev)}>
+                    <EyeOff /> Ocultar columnas
+                    </button>
 
-                  {showColumnSelector && showColumnComponent()}
+                    {showColumnSelector && showColumnComponent()}
+                  </div>
+                  <div className=''>
+                    <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setshowOrderSelector(prev => !prev)}>
+                    <ArrowUpDown />
+                    </button>
+
+                    {showOrderSelector && ShowOrderBy()}
+                  </div>
                 </div>
+
               </div>
 
               {loading ? (
 
-                <loadingComponent></loadingComponent>
+                <LoadingComponent></LoadingComponent>
               ) : products && products.length === 0 ? (
                 <div className="text-center py-16">
                   <Wine className="w-16 h-16 text-gray-300 mx-auto mb-4" />

@@ -55,7 +55,7 @@ const Popup = ({ title, children, onClose }) => {
       />
       
       {/* ======= Content ======= */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300">
 
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold text-gray-800">{title}</h2>

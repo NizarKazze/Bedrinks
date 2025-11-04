@@ -47,8 +47,9 @@ switch ($action) {
         break;
     case 'products':
         $filters = $_POST + $_GET;
+        $order = $_POST + $_GET;
         unset($filters['action']);
-        echo json_encode(get_products($filters));
+        echo json_encode(get_products($filters, $order));
         break;
 
     case 'search_by':

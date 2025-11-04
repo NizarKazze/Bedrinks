@@ -142,9 +142,8 @@ export const UpdateCountryForm = ({countryId, onSuccess}) => {
 }
 
 export const deleteCountry = (id) => {
-  // Aquí ejecutas tu hook usePost o fetch
   const { send } = usePost("backend/filters.php?action=delete_country");
-  send({ id })  // envías id al backend
+  send({ id })
     .then(() => refetch())
     .catch(err => console.error("Error al eliminar:", err));
 };

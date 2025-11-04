@@ -233,14 +233,80 @@ function get_vintages() {
  *
  */
 
- function get_products($filters = []) {
+function update_product() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $id = $input['id'] ?? null;
+    if (!$id) return ['error' => 'ID del producto requerido.'];
+
+    $code = trim($input['code'] ?? '');
+    $name = trim($input['name'] ?? '');
+    $description = $input['description'] ?? null;
+    $reference = $input['reference'] ?? null;
+    $format = $input['format'] ?? null;
+    $price = $input['price'] ?? null;
+    $iva = $input['iva'] ?? 21;
+    $rating = $input['rating'] ?? null;
+    $blend = $input['blend'] ?? null;
+    $winery_id = $input['winery_id'] ?? null;
+    $denomination_id = $input['denomination_id'] ?? null;
+    $category_id = $input['category_id'] ?? null;
+    $vintage_id = $input['vintage_id'] ?? null;
+
+    try {
+        $sql = "UPDATE product SET
+                    code = :code,
+                    name = :name,
+                    description = :description,
+                    reference = :reference,
+                    format = :format,
+                    price = :price,
+                    iva = :iva,
+                    rating = :rating,
+                    blend = :blend,
+                    winery_id = :winery_id,
+                    denomination_id = :denomination_id,
+                    category_id = :category_id,
+                    vintage_id = :vintage_id
+                WHERE id = :id";
+
+        $stmt = $pdo->prepare($sql);
+
+        $stmt->execute([
+            ':code' => $code,
+            ':name' => $name,
+            ':description' => $description,
+            ':reference' => $reference,
+            ':format' => $format,
+            ':price' => $price,
+            ':iva' => $iva,
+            ':rating' => $rating,
+            ':blend' => $blend,
+            ':winery_id' => $winery_id,
+            ':denomination_id' => $denomination_id,
+            ':category_id' => $category_id,
+            ':vintage_id' => $vintage_id,
+            ':id' => $id
+        ]);
+
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
+
+function get_products($filters = [], $order = []) {
     $pdo = Conectiondb();
 
     $query = "SELECT p.* FROM product p";
     $conditions = [];
     $params = [];
 
-    // Join si filtramos por proveedor
+    // --- Join si filtramos por proveedor ---
     if (isset($filters['supplier_id'])) {
         $query .= " LEFT JOIN product_supplier ps ON ps.product_id = p.id";
 
@@ -260,7 +326,7 @@ function get_vintages() {
         }
     }
 
-    // Filtros directos sobre producto
+    // --- Filtros directos ---
     $map = [
         'category_id' => 'p.category_id',
         'denomination_id' => 'p.denomination_id',
@@ -292,14 +358,30 @@ function get_vintages() {
         $query .= " WHERE " . implode(" AND ", $conditions);
     }
 
+    // --- ORDENAMIENTO ---
+    $allowed_order_fields = ['id', 'name', 'price', 'rating', 'iva', 'code', 'category_id'];
+    $order_by = 'p.id';
+    $order_dir = 'ASC';
+
+    if (isset($order['order_by']) && in_array($order['order_by'], $allowed_order_fields)) {
+        $order_by = 'p.' . $order['order_by'];
+    }
+
+    if (isset($order['order_dir']) && strtoupper($order['order_dir']) === 'DESC') {
+        $order_dir = 'DESC';
+    }
+
+    $query .= " ORDER BY $order_by $order_dir";
+
+
     try {
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Devolver productos y depuración
         return [
-            'filters_received' => $filters,
+            'filters' => $filters,
+            'order' => $order,
             'query_debug' => [
                 'sql' => $query,
                 'params' => $params
@@ -308,7 +390,8 @@ function get_vintages() {
         ];
     } catch (PDOException $e) {
         return [
-            'filters_received' => $filters,
+            'filters' => $filters,
+            'order' => $order,
             'query_debug' => [
                 'sql' => $query,
                 'params' => $params
