@@ -448,5 +448,26 @@ function remove_accents($str) {
     return strtr($str, $unwanted);
 }
 
+function search_by_price_range() {
+    $pdo = Conectiondb();
 
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $min_val = isset($input['min_val']) ? floatval($input['min_val']) : 0;
+    $max_val = isset($input['max_val']) ? floatval($input['max_val']) : 999999;
+
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM product WHERE price BETWEEN :min_val AND :max_val");
+
+        $stmt->bindParam(':min_val', $min_val, PDO::PARAM_STR);
+        $stmt->bindParam(':max_val', $max_val, PDO::PARAM_STR);
+
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
 ?>

@@ -73,7 +73,9 @@ export default function ProductFilter() {
     denomination: true,
     vintage: true,
     format: true,
-    price: true
+    price: true,
+    blend: true,
+    rating: true,
   });
 
   const [Columns, setColumns] = useState({
@@ -84,7 +86,8 @@ export default function ProductFilter() {
     denomination: 'denomination',
     vintage: 'vintage',
     format: 'format',
-    price: 'price'
+    price: 'price',
+    blend: 'blend'
   });
   
   const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -246,6 +249,26 @@ export default function ProductFilter() {
     });
   };
 
+  const getAllCategoryChildren = (categories, parentID) => {
+    let result = [];
+
+    for (const cat of categories) {
+      if (cat.id === parentID) {
+        result.push(cat.id);
+
+        if (cat.children && cat.children.length > 0) {
+          for (const child of cat.children) {
+            result = result.concat(getAllCategoryChildren(cat.children, child.id))
+          }
+        }
+      } else if (cat.children && cat.children.length > 0) {
+        result= result.concat(getAllCategoryChildren(cat.children, parentID))
+      }
+    } 
+
+    return result;
+  }
+
   // Funcion CheckboxChange
   /**
    * 
@@ -261,7 +284,24 @@ export default function ProductFilter() {
     setFilters(prev => {
       const currentValues = prev[filterName];
       const isChecked = currentValues.includes(value);
-      
+  
+      // Si estamos filtrando categorías, añadimos también sus hijos
+      if (filterName === "category_id" && categoryData) {
+        const allIds = getAllCategoryChildren(categoryData, value);
+        if (isChecked) {
+          return {
+            ...prev,
+            [filterName]: currentValues.filter(v => !allIds.includes(v))
+          };
+        } else {
+
+          return {
+            ...prev,
+            [filterName]: Array.from(new Set([...currentValues, ...allIds]))
+          };
+        }
+      }
+  
       return {
         ...prev,
         [filterName]: isChecked
@@ -270,6 +310,7 @@ export default function ProductFilter() {
       };
     });
   };
+  
 
   /* Cambia el estado de 'expandedFilters' */
 
@@ -317,7 +358,6 @@ export default function ProductFilter() {
       }
   
       const data = await res.json();
-      console.log(formData)
             
       setProducts(data.products);
       setLoading(false);
@@ -333,9 +373,41 @@ export default function ProductFilter() {
     applyFilters();
   }, [filters, orderBy]);
 
+  const getFullCategoryPath = (categories, id) => {
+    const findCategoryById = (list, targetId, path = []) => {
+      for (const item of list) {
+        if (item.id === targetId) {
+          return [...path, item.name]; // encontramos la categoría
+        }
+        if (item.children && item.children.length > 0) {
+          const found = findCategoryById(item.children, targetId, [...path, item.name]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    return findCategoryById(categories, id);
+  };
+  
   const getOptionName = (category, id) => {
-    const option = filterOptions[category]?.find(opt => opt.id === id);
-    return option?.name || '-';
+    if (category === 'types' && categoryData) {
+      const fullPath = getFullCategoryPath(categoryData, id);
+      if (fullPath) {
+        return fullPath.map((name, index) => (
+          <span 
+            key={index}
+            className="inline-flex items-center px-2 py-1 mr-1 mb-1 text-xs font-semibold rounded-full bg-main-color-50 text-gray-800"
+          >
+            {name}
+          </span>
+        ));
+      }
+      return '-';
+    } else {
+      const option = filterOptions[category]?.find(opt => opt.id === id);
+      return option?.name || '-';
+    }
   };
 
   const totalActiveFilters = Object.values(filters).reduce((acc, arr) => acc + arr.length, 0);
@@ -377,7 +449,6 @@ export default function ProductFilter() {
     });
   };
   
-
   const FilterSection = ({ title, filterKey, options, optionsKey }) => (
 
     <div className="border-b border-gray-200 last:border-b-0">
@@ -547,7 +618,7 @@ export default function ProductFilter() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="min-w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <ProductTableHeader
@@ -610,6 +681,30 @@ export default function ProductFilter() {
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
                       />
+                      <ProductTableHeader
+                        item="price"
+                        label="Precio"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="blend"
+                        label="Blend"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
+                      <ProductTableHeader
+                        item="rating"
+                        label="Rating"
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                      />
                     </tr>
                   </thead>
 
@@ -617,17 +712,22 @@ export default function ProductFilter() {
                     {products && products.length > 0 ? (
                       products.map(product => (
                         <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
                           <td className={`px-4 py-3 text-sm text-gray-900 ${isHidden("name") ? "hidden" : ""}`}>{product.name}</td>
                           <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("winery") ? "hidden" : ""}`}>{getOptionName('wineries', product.winery_id)}</td>
                           <td className={`px-4 py-3 text-sm ${isHidden("category") ? "hidden" : ""}`}>
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-main-color-50">
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
                               {getOptionName('types', product.category_id)}
                             </span>
                           </td>
-                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
-                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
-                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("price") ? "hidden" : ""}`}>{product.price} </td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("blend") ? "hidden" : ""}`}>{product.blend} </td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("rating") ? "hidden" : ""}`}>{product.rating} </td>
+
+
                         </tr>
                       ))
                     ) : null}

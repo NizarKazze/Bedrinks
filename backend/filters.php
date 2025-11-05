@@ -57,7 +57,10 @@ switch ($action) {
         $search = $_POST['search'] ?? $_GET['search'] ?? '';
         echo search_by_name($table, $search);
         break;
-        
+
+    case 'search_by_range_price':
+        echo json_encode(search_by_price_range());
+        break;       
     default:
         echo json_encode(['error' => 'Invalid action']);
 }
