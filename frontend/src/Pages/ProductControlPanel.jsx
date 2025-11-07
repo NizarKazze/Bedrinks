@@ -44,17 +44,21 @@ const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters, fetch
   };
 
   return (
-    <th className={isHidden(item) ? "hidden" : ""}>
+    <th className={`px-10 pt-2 align-top ${isHidden(item) ? "hidden" : ""}`}>
+      <div className='flex flex-col justify-start'>
       {label}
       {hasInput && (
         <input
           type="text"
-          className="mt-1 block w-full"
+          className="my-2 p-1 rounded-lg block w-full"
           placeholder="Buscar..."
           value={searchValue}
           onChange={handleChange}
         />
       )}
+      </div>
+
+
     </th>
   );
 };
@@ -71,10 +75,10 @@ export default function ProductFilter() {
     winery: true,
     category: true,
     denomination: true,
-    vintage: true,
+    vintage: false,
     format: true,
     price: true,
-    blend: true,
+    blend: false,
     rating: true,
   });
 
@@ -389,7 +393,7 @@ export default function ProductFilter() {
     
     return findCategoryById(categories, id);
   };
-  
+
   const getOptionName = (category, id) => {
     if (category === 'types' && categoryData) {
       const fullPath = getFullCategoryPath(categoryData, id);
@@ -497,12 +501,19 @@ export default function ProductFilter() {
 
 
   return (
-    <div className="min-h-screen w-3/4 mt-16 mx-auto p-6">
+    <div className="min-h-screen mt-8  p-6 flex">
 
       {/* Header */}
-      <HeaderPage></HeaderPage>
+      <div className='w-1/4 border-r-2 border-gray-200 mr-6 flex flex-col'>
+        <div id='logo' className='w-48 pb-6 border-b-2 border-gray-200'>
+          <img src={Logo} alt="" />
+        </div>
+          <a href="/main-control-panel" className='mb-4 mt-4'>Panel Principal</a>
+          <a href="/product-control-panel" className='mb-4'>Gestión de productos</a>
+          <a href="#">Crear Propuesta</a>
+      </div>
 
-      <div className="">
+      <div className="w-full mx-auto px-16">
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Panel de Filtros */}
@@ -569,7 +580,7 @@ export default function ProductFilter() {
           </div>
 
           {/* Tabla de Productos */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               
               <div className="p-4 border-b border-gray-200">
@@ -580,8 +591,8 @@ export default function ProductFilter() {
               </div>
 
               <div id='search-container' className='p-4 border-b border-gray-200 flex justify-between'>
-                <div id='search-product'>
-                  <input type="text" placeholder='Buscar productos...' className=''/>
+                <div id='search-product' className='flex gap-2 items-center'>
+                  <input type="text" placeholder='Buscar productos...' className='bg-gray-100 p-4 rounded-lg'/>
                 </div>
                 <div className='flex gap-2'>
                   <div >
@@ -617,7 +628,7 @@ export default function ProductFilter() {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto w-full">
                   <table className="min-w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -712,20 +723,21 @@ export default function ProductFilter() {
                     {products && products.length > 0 ? (
                       products.map(product => (
                         <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
-                          <td className={`px-4 py-3 text-sm text-gray-900 ${isHidden("name") ? "hidden" : ""}`}>{product.name}</td>
-                          <td className={`px-4 py-3 text-sm text-gray-500 ${isHidden("winery") ? "hidden" : ""}`}>{getOptionName('wineries', product.winery_id)}</td>
-                          <td className={`px-4 py-3 text-sm ${isHidden("category") ? "hidden" : ""}`}>
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-900 ${isHidden("name") ? "hidden" : ""}`}>{product.name}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("winery") ? "hidden" : ""}`}>{getOptionName('wineries', product.winery_id)}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm ${isHidden("category") ? "hidden" : ""}`}>
+                            <span className="inline-flex whitespace-nowrap px-2 py-1 text-xs font-semibold rounded-full">
                               {getOptionName('types', product.category_id)}
                             </span>
                           </td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("price") ? "hidden" : ""}`}>{product.price} </td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("blend") ? "hidden" : ""}`}>{product.blend} </td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("rating") ? "hidden" : ""}`}>{product.rating} </td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("price") ? "hidden" : ""}`}>{product.price} </td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("blend") ? "hidden" : ""}`}>{product.blend} </td>
+                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("rating") ? "hidden" : ""}`}>{product.rating} </td>
+                          
 
 
                         </tr>

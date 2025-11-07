@@ -470,4 +470,24 @@ function search_by_price_range() {
         return [];
     }
 }
+
+function search_product_by_name() {
+    $pdo = Conectiondb();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    $name = trim($input['name'] ?? '');
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM product WHERE name = :name");
+
+        $stmt->bindParam(':name', $name, PDO::PARAM_STR);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+        
+    } catch (PDOException $e) {
+        return [];
+    }
+}
 ?>
