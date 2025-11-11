@@ -509,8 +509,10 @@ export default function ProductFilter() {
               </div>
 
               <div id='search-container' className='p-4 border-b border-gray-200 flex justify-between'>
-                <div id='search-product'>
-                  <input type="text" placeholder='Buscar productos...' className=''/>
+                <div id='search-product' className='flex gap-2 p-2'>
+                  <input type="text" placeholder='Buscar productos...' className='p-2 bg-gray-100 rounded-lg border-2 border-gray-200'/>
+                  <button className='bg-main-color-50 p-2 rounded-lg'><Search></Search></button>
+                  
                 </div>
                 <div className='flex gap-2'>
                   <div >
