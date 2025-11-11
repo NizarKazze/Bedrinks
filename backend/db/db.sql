@@ -142,14 +142,41 @@ CREATE TABLE product_supplier (
 -- 12. customer
 -- ========================
 
-CREATE TABLE customer (
+CREATE TABLE clients (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255),
   phone VARCHAR(50),
   address TEXT,
-  creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE proposals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  status ENUM('pending', 'approved', 'rejected', 'sent') DEFAULT 'pending',
+  total DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  client_id INT NOT NULL,
+  proposal_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+  FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE
+);
+
+CREATE TABLE proposal_products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT DEFAULT 1,
+  price DECIMAL(10,2) DEFAULT 0,
+  FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
 
 
 -- ========================
