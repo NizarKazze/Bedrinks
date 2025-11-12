@@ -60,6 +60,9 @@ switch ($action) {
 
     case 'search_by_range_price':
         echo json_encode(search_by_price_range());
+        break;
+    case 'update_product':
+        echo json_encode(update_product());
         break;       
     default:
         echo json_encode(['error' => 'Invalid action']);

@@ -233,71 +233,6 @@ function get_vintages() {
  *
  */
 
-function update_product() {
-    $pdo = Conectiondb();
-
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) $input = $_POST;
-
-    $id = $input['id'] ?? null;
-    if (!$id) return ['error' => 'ID del producto requerido.'];
-
-    $code = trim($input['code'] ?? '');
-    $name = trim($input['name'] ?? '');
-    $description = $input['description'] ?? null;
-    $reference = $input['reference'] ?? null;
-    $format = $input['format'] ?? null;
-    $price = $input['price'] ?? null;
-    $iva = $input['iva'] ?? 21;
-    $rating = $input['rating'] ?? null;
-    $blend = $input['blend'] ?? null;
-    $winery_id = $input['winery_id'] ?? null;
-    $denomination_id = $input['denomination_id'] ?? null;
-    $category_id = $input['category_id'] ?? null;
-    $vintage_id = $input['vintage_id'] ?? null;
-
-    try {
-        $sql = "UPDATE product SET
-                    code = :code,
-                    name = :name,
-                    description = :description,
-                    reference = :reference,
-                    format = :format,
-                    price = :price,
-                    iva = :iva,
-                    rating = :rating,
-                    blend = :blend,
-                    winery_id = :winery_id,
-                    denomination_id = :denomination_id,
-                    category_id = :category_id,
-                    vintage_id = :vintage_id
-                WHERE id = :id";
-
-        $stmt = $pdo->prepare($sql);
-
-        $stmt->execute([
-            ':code' => $code,
-            ':name' => $name,
-            ':description' => $description,
-            ':reference' => $reference,
-            ':format' => $format,
-            ':price' => $price,
-            ':iva' => $iva,
-            ':rating' => $rating,
-            ':blend' => $blend,
-            ':winery_id' => $winery_id,
-            ':denomination_id' => $denomination_id,
-            ':category_id' => $category_id,
-            ':vintage_id' => $vintage_id,
-            ':id' => $id
-        ]);
-
-        return ['success' => true];
-    } catch (PDOException $e) {
-        return ['error' => $e->getMessage()];
-    }
-}
-
 
 function get_products($filters = [], $order = []) {
     $pdo = Conectiondb();
@@ -404,7 +339,7 @@ function get_products($filters = [], $order = []) {
 function search_by_name($table, $search) {
     $pdo = Conectiondb();
 
-    $allowedTables = ['category', 'vintage', 'winery', 'supplier'];
+    $allowedTables = ['category', 'vintage', 'winery', 'supplier', 'product'];
 
     if (!in_array($table, $allowedTables)) {
         return json_encode(['error' => 'Tabla no permitida']);
@@ -414,27 +349,34 @@ function search_by_name($table, $search) {
     $search = strtolower(remove_accents($search));
 
     try {
-        $sql = "
-            SELECT id, name
-            FROM $table
-            WHERE REPLACE(
-                    LOWER(CONVERT(name USING utf8)),
-                    ' ',
-                    ''
-                ) COLLATE utf8_general_ci
-                LIKE REPLACE(:search, ' ', '')
-            ORDER BY name ASC
-        ";
+        $fields = ['name'];
+        if ($table === 'product') {
+            $fields = ['name', 'code', 'description', 'reference'];
+        }
+
+        $conditions = [];
+        foreach ($fields as $field) {
+            // utf8mb4 y usamos collation compatible
+            $conditions[] = "REPLACE(LOWER(CONVERT($field USING utf8mb4)), ' ', '') COLLATE utf8mb4_unicode_ci LIKE REPLACE(:search, ' ', '')";
+        }
+        $where = implode(' OR ', $conditions);
+
+        $columns = $table === 'product'
+            ? '*'
+            : '*';
+
+        $sql = "SELECT $columns FROM $table WHERE $where ORDER BY name ASC";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':search' => '%' . $search . '%']);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return json_encode($results, JSON_UNESCAPED_UNICODE);
+        return json_encode($results ?: [], JSON_UNESCAPED_UNICODE);
     } catch (PDOException $e) {
         return json_encode(['error' => $e->getMessage()]);
     }
 }
+
 
 function remove_accents($str) {
     $unwanted = [
@@ -488,6 +430,54 @@ function search_product_by_name() {
         
     } catch (PDOException $e) {
         return [];
+    }
+}
+
+function update_product() {
+    $pdo = Conectiondb(); // Asegúrate de tener tu función de conexión
+
+    // Obtener datos del POST
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) $input = $_POST;
+
+    if (empty($input['id'])) {
+        return json_encode(['error' => 'El ID del producto es requerido']);
+    }
+
+    $id = (int)$input['id'];
+    $fields = [
+        'code', 'name', 'description', 'reference', 'format', 
+        'price', 'iva', 'rating', 'blend', 
+        'winery_id', 'denomination_id', 'category_id', 'vintage_id'
+    ];
+
+    // Construir dinámicamente la query
+    $setParts = [];
+    $params = ['id' => $id];
+    foreach ($fields as $field) {
+        if (isset($input[$field])) {
+            $setParts[] = "$field = :$field";
+            $params[$field] = $input[$field];
+        }
+    }
+
+    if (empty($setParts)) {
+        return json_encode(['error' => 'No se enviaron campos para actualizar']);
+    }
+
+    $sql = "UPDATE product SET " . implode(', ', $setParts) . " WHERE id = :id";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        if ($stmt->rowCount() > 0) {
+            return json_encode(['success' => 'Producto actualizado correctamente']);
+        } else {
+            return json_encode(['warning' => 'No se realizaron cambios']);
+        }
+    } catch (PDOException $e) {
+        return json_encode(['error' => 'Error al actualizar: ' . $e->getMessage()]);
     }
 }
 ?>

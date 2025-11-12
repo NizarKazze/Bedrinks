@@ -1,73 +1,79 @@
 import { useState, useEffect } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff, ArrowUpDown } from 'lucide-react';
+import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save } from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
 
-const HeaderPage = () => {
-  return (
-    <div className="mb-10 pb-4 border-b-2 border-gray-200">
-      <div className="flex flex-col gap-3 mb-2">
-        <div id='logo' className='mb-8'>
-          <img src={Logo} alt="Bedrinks" />
-        </div>
-        <h1 className="text-4xl text-gray-600 border-t-2 pt-4">Panel de Productos</h1>
-      </div>
-    </div>
-  )
-}
+import { LoadingComponent } from '../Components/UI/UIHelpers';
+import { ProductTableHeader } from '../Components/UI/ProductTableUI';
 
-const LoadingComponent = () => {
-  return (
-    <div className="text-center py-16">
-      <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-orange-400"></div>
-      <p className="mt-4 text-gray-600">Cargando productos...</p>
-    </div>
-  )
-}
-
-const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters, fetchSearch, addFilter }) => {
-  const [searchValue, setSearchValue] = useState("");
-
-  const handleChange = async (e) => {
-    const value = e.target.value;
-    setSearchValue(value);
-
-    const trimmed = value.trim();
-
-    if (trimmed === "") {
-      setFilters(prev => ({ ...prev, [`${item}_id`]: [] }));
-    } else {
-      const results = await fetchSearch(item, trimmed);
-      addFilter(`${item}_id`, results, true);
-    }
-  };
-
-  return (
-    <th className={`px-10 pt-2 align-top ${isHidden(item) ? "hidden" : ""}`}>
-      <div className='flex flex-col justify-start'>
-      {label}
-      {hasInput && (
-        <input
-          type="text"
-          className="my-2 p-1 rounded-lg block w-full"
-          placeholder="Buscar..."
-          value={searchValue}
-          onChange={handleChange}
-        />
-      )}
-      </div>
-
-
-    </th>
-  );
-};
 
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
   const [loading, setLoading] = useState(true)
   const [orderBy, setOrderBy] = useState('name')
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
+
+  // Estados para colapsar paneles
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
+
+  const handleSelect = (productId) => {
+    setSelectedProducts((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedProducts(products.map((p) => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleAddProducts = () => {
+    console.log("Productos seleccionados:", selectedProducts);
+  };
+
+  const startEdit = (product) => {
+    setEditingId(product.id);
+    setEditData(product);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditData({
+      ...editData,
+      [name]: value,
+    });
+  };
+
+  const saveEdit = async () => {
+    try {
+      const res = await fetch("/backend/filters.php?action=update_product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      });
+      const data = await res.json();
+      // Aquí actualizarías el estado principal de products si quieres reflejar cambios
+      setEditingId(null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
 
   const [visibleColumns, setVisibleColumns] = useState({
     code: true,
@@ -401,8 +407,9 @@ export default function ProductFilter() {
         return fullPath.map((name, index) => (
           <span 
             key={index}
-            className="inline-flex items-center px-2 py-1 mr-1 mb-1 text-xs font-semibold rounded-full bg-main-color-50 text-gray-800"
-          >
+            className={`inline-flex items-center px-2 py-1 mr-1 mb-1 text-xs font-semibold rounded-full text-gray-800 ${
+              index === 0 ? 'bg-orange-300' : 'bg-main-color-50'
+            }`}          >
             {name}
           </span>
         ));
@@ -418,15 +425,20 @@ export default function ProductFilter() {
 
   const fetchSearch = async (table, search) => {
     try {
-      const params = new URLSearchParams({ table, search });
+      const productFields = ['product', 'name', 'code', 'description', 'reference', 'barcode'];
+      const searchTable = productFields.includes(table) ? 'product' : table;
+  
+      const params = new URLSearchParams({ table: searchTable, search });
       const res = await fetch(`backend/filters.php?action=search_by&${params.toString()}`);
       const data = await res.json();
+  
       return data; 
     } catch (error) {
       console.error('Error en búsqueda:', error);
       return [];
     }
   };
+  
   
 
   const addFilter = (key, items, replace = false) => {
@@ -501,93 +513,149 @@ export default function ProductFilter() {
 
 
   return (
-    <div className="min-h-screen mt-8  p-6 flex">
+    <div className="min-h-screen flex">
 
-      {/* Header */}
-      <div className='w-1/4 border-r-2 border-gray-200 mr-6 flex flex-col'>
-        <div id='logo' className='w-48 pb-6 border-b-2 border-gray-200'>
-          <img src={Logo} alt="" />
+      {/* Sidebar Izquierdo Colapsable */}
+      <div className={`transition-all duration-300 border-r-2 border-gray-200 flex flex-col bg-white ${isSidebarCollapsed ? 'w-16' : 'w-1/4'}`}>
+        <div className="flex items-center justify-between p-4 border-b-2 border-gray-200">
+          {!isSidebarCollapsed && (
+            <div id='logo' className='w-48'>
+              <img src={Logo} alt="" />
+            </div>
+          )}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title={isSidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            {isSidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
-          <a href="/main-control-panel" className='mb-4 mt-4'>Panel Principal</a>
-          <a href="/product-control-panel" className='mb-4'>Gestión de productos</a>
-          <a href="#">Crear Propuesta</a>
+        
+        {isSidebarCollapsed ? (
+          <div className="flex flex-col items-center gap-4 mt-4">
+            <a href="/main-control-panel" className="p-3 hover:bg-gray-100 rounded-lg" title="Panel Principal">
+              <Menu className="w-5 h-5" />
+            </a>
+            <a href="/product-control-panel" className="p-3 hover:bg-gray-100 rounded-lg" title="Gestión de productos">
+              <Wine className="w-5 h-5" />
+            </a>
+            <a href="#" className="p-3 hover:bg-gray-100 rounded-lg" title="Crear Propuesta">
+              <Search className="w-5 h-5" />
+            </a>
+          </div>
+        ) : (
+          <div className="p-4 flex flex-col gap-4">
+            <a href="/main-control-panel" className='mb-4 mt-4'>Panel Principal</a>
+            <a href="/product-control-panel" className='mb-4'>Gestión de productos</a>
+            <a href="#">Crear Propuesta</a>
+          </div>
+        )}
       </div>
 
-      <div className="w-full mx-auto px-16">
+      <div className="w-full mx-auto px-16 mt-10">
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Panel de Filtros */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
-              <div className="p-4 border-b border-gray-200">
+          {/* Panel de Filtros Colapsable */}
+          {!isFilterPanelCollapsed && (
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
+                <div className="p-4 border-b border-gray-200">
 
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Search className="w-5 h-5" />
-                    Filtros
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Search className="w-5 h-5" />
+                      Filtros
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      {totalActiveFilters > 0 && (
+                        <button
+                          onClick={clearFilters}
+                          className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" />
+                          Limpiar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setIsFilterPanelCollapsed(true)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        title="Minimizar filtros"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+
                   {totalActiveFilters > 0 && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
-                    >
-                      <X className="w-3 h-3" />
-                      Limpiar
-                    </button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {totalActiveFilters} filtro{totalActiveFilters > 1 ? 's' : ''} activo{totalActiveFilters > 1 ? 's' : ''}
+                    </p>
                   )}
                 </div>
 
-                {totalActiveFilters > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {totalActiveFilters} filtro{totalActiveFilters > 1 ? 's' : ''} activo{totalActiveFilters > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-
-              <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-                <FilterSection
-                  title="Tipo de Vino"
-                  filterKey="category_id"
-                  options={filterOptions.types}
-                  optionsKey="types"
-                />
-                <FilterSection
-                  title="Denominación"
-                  filterKey="denomination_id"
-                  options={filterOptions.denominations}
-                  optionsKey="denominations"
-                />
-                <FilterSection
-                  title="Bodega"
-                  filterKey="winery_id"
-                  options={filterOptions.wineries}
-                  optionsKey="wineries"
-                />
-                <FilterSection
-                  title="Añada"
-                  filterKey="vintage_id"
-                  options={filterOptions.vintages}
-                  optionsKey="vintages"
-                />
-                <FilterSection
-                  title="Proveedor"
-                  filterKey="supplier_id"
-                  options={filterOptions.suppliers}
-                  optionsKey="suppliers"
-                />
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+                  <FilterSection
+                    title="Tipo de Vino"
+                    filterKey="category_id"
+                    options={filterOptions.types}
+                    optionsKey="types"
+                  />
+                  <FilterSection
+                    title="Denominación"
+                    filterKey="denomination_id"
+                    options={filterOptions.denominations}
+                    optionsKey="denominations"
+                  />
+                  <FilterSection
+                    title="Bodega"
+                    filterKey="winery_id"
+                    options={filterOptions.wineries}
+                    optionsKey="wineries"
+                  />
+                  <FilterSection
+                    title="Añada"
+                    filterKey="vintage_id"
+                    options={filterOptions.vintages}
+                    optionsKey="vintages"
+                  />
+                  <FilterSection
+                    title="Proveedor"
+                    filterKey="supplier_id"
+                    options={filterOptions.suppliers}
+                    optionsKey="suppliers"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Tabla de Productos */}
-          <div className="lg:col-span-3 min-w-0">
+          <div className={`lg:col-span-3 min-w-0 transition-all duration-300 ${isFilterPanelCollapsed ? 'lg:col-span-4' : ''}`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900">
                   Productos
                   <span className="text-main-color ml-2">{products && products.length > 0 ? products.length : 0}</span>
                 </h2>
+                
+                {/* Botón para mostrar filtros cuando están ocultos */}
+                {isFilterPanelCollapsed && (
+                  <button
+                    onClick={() => setIsFilterPanelCollapsed(false)}
+                    className="flex items-center gap-2 bg-main-color-50 hover:bg-orange-100 px-4 py-2 rounded-lg transition-colors"
+                    title="Mostrar filtros"
+                  >
+                    <Search className="w-4 h-4 text-gray-700" />
+                    <span className="text-sm text-gray-700 font-medium">Mostrar Filtros</span>
+                    {totalActiveFilters > 0 && (
+                      <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                        {totalActiveFilters}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
 
               <div id='search-container' className='p-4 border-b border-gray-200 flex justify-between'>
@@ -632,22 +700,43 @@ export default function ProductFilter() {
                   <table className="min-w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      {/* Checkbox de seleccionar todos */}
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedProducts.length > 0 &&
+                            selectedProducts.length === products.length
+                          }
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                        />
+                      </th>
+                      <th className="px-10 py-3">Acciones</th>
+
+                      {/* Atributos únicos → búsqueda directa */}
                       <ProductTableHeader
                         item="code"
                         label="Código"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="name"
                         label="Nombre"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
+                      {/* Campos relacionales → filtros */}
                       <ProductTableHeader
                         item="winery"
                         label="Bodega"
@@ -656,7 +745,9 @@ export default function ProductFilter() {
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="category"
                         label="Tipo"
@@ -665,7 +756,9 @@ export default function ProductFilter() {
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="denomination"
                         label="D.O."
@@ -674,7 +767,9 @@ export default function ProductFilter() {
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="vintage"
                         label="Añada"
@@ -683,68 +778,251 @@ export default function ProductFilter() {
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
+                      {/* Atributos directos → sin filtros */}
                       <ProductTableHeader
                         item="format"
                         label="Formato"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="price"
                         label="Precio"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="blend"
                         label="Blend"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
                       />
+
                       <ProductTableHeader
                         item="rating"
                         label="Rating"
+                        hasInput={true}
                         isHidden={isHidden}
                         setFilters={setFilters}
                         fetchSearch={fetchSearch}
                         addFilter={addFilter}
+                        setProducts={setProducts}
+                        
                       />
                     </tr>
                   </thead>
 
+
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {products && products.length > 0 ? (
-                      products.map(product => (
-                        <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("code") ? "hidden" : ""}`}>{product.code}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-900 ${isHidden("name") ? "hidden" : ""}`}>{product.name}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("winery") ? "hidden" : ""}`}>{getOptionName('wineries', product.winery_id)}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm ${isHidden("category") ? "hidden" : ""}`}>
-                            <span className="inline-flex whitespace-nowrap px-2 py-1 text-xs font-semibold rounded-full">
-                              {getOptionName('types', product.category_id)}
-                            </span>
-                          </td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("denomination") ? "hidden" : ""}`}>{getOptionName('denominations', product.denomination_id)}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("vintage") ? "hidden" : ""}`}>{getOptionName('vintages', product.vintage_id)}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("format") ? "hidden" : ""}`}>{product.format}</td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("price") ? "hidden" : ""}`}>{product.price} </td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("blend") ? "hidden" : ""}`}>{product.blend} </td>
-                          <td className={`px-10 py-3 whitespace-nowrap text-sm text-gray-500 ${isHidden("rating") ? "hidden" : ""}`}>{product.rating} </td>
-                          
+        {products.map((product) => {
+          const isEditing = editingId === product.id;
+          return (
+            <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
+
+              <td className="px-4 py-3">
+                <input type="checkbox" />
+              </td>
+
+              <td className="px-10 py-3">
+                {isEditing ? (
+                  <div id='Btn-actions' className='flex gap-2'>
+                    <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save /></button>
+                    <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff /></button>
+                  </div>
+
+                ) : (
+                  <button onClick={() => startEdit(product)} className="bg-main-color-50 p-1 rounded-lg">
+                    <Pencil className='w-5'/>
+                  </button>
+                )}
+              </td>
+
+              {/* Campos directos */}
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    name="code"
+                    value={editData.code}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.code
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    name="name"
+                    value={editData.name}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.name
+                )}
+              </td>
+
+              {/* Campos relacionales */}
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <select
+                    name="winery_id"
+                    value={editData.winery_id || ""}
+                    onChange={handleChange}
+                  >
+                    <option value="">Seleccionar</option>
+                    {filterOptions.wineries.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  getOptionName("wineries", product.winery_id)
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <select
+                    name="category_id"
+                    value={editData.category_id || ""}
+                    onChange={handleChange}
+                  >
+                    <option value="">Seleccionar</option>
+                    {filterOptions.types.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  getOptionName("types", product.category_id)
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <select
+                    name="denomination_id"
+                    value={editData.denomination_id || ""}
+                    onChange={handleChange}
+                  >
+                    <option value="">Seleccionar</option>
+                    {filterOptions.denominations.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  getOptionName("denominations", product.denomination_id)
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <select
+                    name="vintage_id"
+                    value={editData.vintage_id || ""}
+                    onChange={handleChange}
+                  >
+                    <option value="">Seleccionar</option>
+                    {filterOptions.vintages.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  getOptionName("vintages", product.vintage_id)
+                )}
+              </td>
+
+              {/* Otros campos directos */}
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    name="format"
+                    value={editData.format || ""}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.format
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    name="price"
+                    value={editData.price || ""}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.price
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    name="blend"
+                    value={editData.blend || ""}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.blend
+                )}
+              </td>
+
+              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    name="rating"
+                    value={editData.rating || ""}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  product.rating
+                )}
+              </td>
 
 
-                        </tr>
-                      ))
-                    ) : null}
-                  </tbody>
-                </table>
+            </tr>
+          );
+        })}
+      </tbody>
+                  </table>
+                  
+                  <div className="flex justify-end mb-3">
+                    <button
+                      onClick={handleAddProducts}
+                      className="px-4 py-2 bg-main-color-50 mr-4 my-6 rounded-lg"
+                    >
+                      Añadir productos
+                    </button>
+                  </div>
+      
                 </div>
               )}
             </div>
