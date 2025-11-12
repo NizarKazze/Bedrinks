@@ -6,6 +6,7 @@ import Logo from '../assets/BeDrinks-logo.png'
 
 import { LoadingComponent } from '../Components/UI/UIHelpers';
 import { ProductTableHeader } from '../Components/UI/ProductTableUI';
+import { ProductsNotFound } from '../Components/UI/UIHelpers';
 
 
 
@@ -686,14 +687,8 @@ export default function ProductFilter() {
                 <LoadingComponent></LoadingComponent>
               ) : products && products.length === 0 ? (
                 <div className="text-center py-16">
-                  <Wine className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 text-lg">No se encontraron productos</p>
-                  <button
-                    onClick={clearFilters}
-                    className="mt-4 text-main-color text-sm underline"
-                  >
-                    Limpiar filtros
-                  </button>
+                  <ProductsNotFound clearFilters={clearFilters}></ProductsNotFound>
+
                 </div>
               ) : (
                 <div className="overflow-x-auto w-full">
@@ -848,8 +843,8 @@ export default function ProductFilter() {
                   </div>
 
                 ) : (
-                  <button onClick={() => startEdit(product)} className="bg-main-color-50 p-1 rounded-lg">
-                    <Pencil className='w-5'/>
+                  <button onClick={() => startEdit(product)} className="bg-main-color-50 p-2 rounded-lg">
+                    <Pencil className='w-4 h-5'/>
                   </button>
                 )}
               </td>
