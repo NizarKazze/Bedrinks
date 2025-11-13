@@ -22,6 +22,13 @@ export default function ProductFilter() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
 
+  console.log(selectedProducts)
+
+    const removeProduct = (id) => {
+    setSelectedProducts(selectedProducts.filter((item) => item !== id));
+  };
+  
+
   const handleSelect = (productId) => {
     setSelectedProducts((prev) =>
       prev.includes(productId)
@@ -662,7 +669,26 @@ const getOptionName = (category, id) => {
                   />
                 </div>
               </div>
+                  <div style={{ padding: "20px" }}>
+                    <h2>Selected Products</h2>
+
+                    {selectedProducts.length === 0 ? (
+                      <p>No hay productos seleccionados</p>
+                    ) : (
+                      <ul>
+                        {selectedProducts.map((id) => (
+                          <li key={id}>
+                            {id}{" "}
+                            <button onClick={() => removeProduct(id)} style={{ color: "red" }}>
+                              Eliminar
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
             </div>
+            
           )}
 
           {/* Tabla de Productos */}
@@ -863,11 +889,26 @@ const getOptionName = (category, id) => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {products.map((product) => {
                       const isEditing = editingId === product.id;
+
+                            const handleCheckboxChangeProducts = () => {
+      if (selectedProducts.includes(product.id)) {
+        setSelectedProducts(selectedProducts.filter((id) => id !== product.id));
+      } else {
+        setSelectedProducts([...selectedProducts, product.id]);
+      }
+    };
+  
+
                       return (
                         <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
 
-                          <td className="px-4 py-3">
-                            <input type="checkbox" />
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              value={product.id}
+                              checked={selectedProducts.includes(product.id)}
+                              onChange={handleCheckboxChangeProducts}
+                            />
                           </td>
 
                           <td className="px-10 py-3">
