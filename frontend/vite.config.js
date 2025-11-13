@@ -4,14 +4,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   
-  // <-- Añadimos la base para producción en subdirectorio
-
   server: {
     proxy: {
       '/backend': {
-        target: 'http://localhost:8888/Bedrinks', // tu backend remoto real
+        target: 'http://localhost/Bedrinks',
         changeOrigin: true,
-        secure: false, // opcional, útil si el backend usa HTTPS con certificado no válido
+        secure: false,
         rewrite: (path) => path.replace(/^\/backend/, '/backend'),
       },
     },

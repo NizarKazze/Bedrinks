@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp, EyeOff, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save } from 'lucide-react';
+import { Search, Wine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save, Funnel } from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
@@ -60,20 +60,32 @@ export default function ProductFilter() {
     });
   };
 
-  const saveEdit = async () => {
-    try {
-      const res = await fetch("/backend/filters.php?action=update_product", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
-      });
-      const data = await res.json();
-      // Aquí actualizarías el estado principal de products si quieres reflejar cambios
-      setEditingId(null);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+const saveEdit = async () => {
+  try {
+    const res = await fetch("/backend/filters.php?action=update_product", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editData),
+    });
+
+    // Si el backend responde con éxito HTTP
+    if (!res.ok) throw new Error("Error al actualizar el producto");
+
+    // Actualizamos el estado de productos directamente
+    setProducts((prevProducts) =>
+      prevProducts.map((product) =>
+        product.id === editData.id ? { ...product, ...editData } : product
+      )
+    );
+
+    setEditingId(null);
+    setEditData({});
+  } catch (error) {
+    console.error("Error al actualizar el producto:", error);
+  }
+};
+
+
 
 
   const [visibleColumns, setVisibleColumns] = useState({
@@ -174,6 +186,17 @@ export default function ProductFilter() {
     vintage_id: [],
     supplier_id: []
   });
+
+  const applyCategoryFilter = (parentID) => {
+    if (!categoryData) return;
+
+    const allCategoryIds = getAllCategoryChildren(categoryData, parentID);
+
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      category_id: allCategoryIds
+    }));
+  };
 
   /* ======= Obtener Datos ======== */
 
@@ -401,26 +424,37 @@ export default function ProductFilter() {
     return findCategoryById(categories, id);
   };
 
-  const getOptionName = (category, id) => {
-    if (category === 'types' && categoryData) {
-      const fullPath = getFullCategoryPath(categoryData, id);
-      if (fullPath) {
-        return fullPath.map((name, index) => (
-          <span 
-            key={index}
-            className={`inline-flex items-center px-2 py-1 mr-1 mb-1 text-xs font-semibold rounded-full text-gray-800 ${
-              index === 0 ? 'bg-orange-300' : 'bg-main-color-50'
-            }`}          >
-            {name}
-          </span>
-        ));
-      }
-      return '-';
-    } else {
-      const option = filterOptions[category]?.find(opt => opt.id === id);
-      return option?.name || '-';
+const getOptionName = (category, id) => {
+  if (category === 'types' && categoryData) {
+    const fullPath = getFullCategoryPath(categoryData, id);
+    if (fullPath && fullPath.length > 0) {
+      const firstName = fullPath[0];
+
+      const colorScale = firstName === 'Vino'
+        ? ['bg-orange-400', 'bg-orange-300', 'bg-orange-200', 'bg-orange-100']
+        : firstName === 'Whisky'
+        ? ['bg-blue-400', 'bg-blue-300', 'bg-blue-200', 'bg-blue-100']
+        : ['bg-blue-400', 'bg-blue-300', 'bg-blue-200', 'bg-blue-100'];
+
+      return fullPath.map((name, index) => (
+        <span
+          key={index}
+          className={`inline-flex items-center px-2 py-1 mr-1 mb-1 text-xs font-semibold rounded-full text-gray-800 ${
+            colorScale[index] || colorScale[colorScale.length - 1]
+          }`}
+        >
+          {name} {/* Se muestra el nombre */}
+        </span>
+      ));
     }
-  };
+    return '-';
+  } else {
+    const option = filterOptions[category]?.find(opt => opt.id === id);
+    return option?.name || '-';
+  }
+};
+
+
 
   const totalActiveFilters = Object.values(filters).reduce((acc, arr) => acc + arr.length, 0);
 
@@ -641,32 +675,33 @@ export default function ProductFilter() {
                   <span className="text-main-color ml-2">{products && products.length > 0 ? products.length : 0}</span>
                 </h2>
                 
-                {/* Botón para mostrar filtros cuando están ocultos */}
-                {isFilterPanelCollapsed && (
-                  <button
-                    onClick={() => setIsFilterPanelCollapsed(false)}
-                    className="flex items-center gap-2 bg-main-color-50 hover:bg-orange-100 px-4 py-2 rounded-lg transition-colors"
-                    title="Mostrar filtros"
-                  >
-                    <Search className="w-4 h-4 text-gray-700" />
-                    <span className="text-sm text-gray-700 font-medium">Mostrar Filtros</span>
-                    {totalActiveFilters > 0 && (
-                      <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                        {totalActiveFilters}
-                      </span>
-                    )}
-                  </button>
-                )}
+                <div className='flex gap-2'>
+                    <button className='bg-orange-300 p-2 rounded-lg' onClick={() => applyCategoryFilter(1)}>Vinos</button>
+                    <button className='bg-orange-300 p-2 rounded-lg'> Destilados</button>
+
+                  {isFilterPanelCollapsed && (
+                    <button
+                      onClick={() => setIsFilterPanelCollapsed(false)}
+                      className="flex items-center gap-2  px-4 py-2 rounded-lg transition-colors"
+                      title="Mostrar filtros"
+                    >
+                      <span className="text-sm text-gray-700 font-medium"><Funnel></Funnel></span>
+                      {totalActiveFilters > 0 && (
+                        <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                          {totalActiveFilters}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
               </div>
 
-              <div id='search-container' className='p-4 border-b border-gray-200 flex justify-between'>
-                <div id='search-product'>
-                  <input type="text" placeholder='Buscar productos...' className=''/>
-                </div>
+              <div id='search-container' className='p-4 border-b border-gray-200 flex justify-end'>
                 <div className='flex gap-2'>
                   <div >
                     <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setShowColumnSelector(prev => !prev)}>
-                    <EyeOff /> Ocultar columnas
+                    <ChartNoAxesColumnDecreasing /> columnas
                     </button>
 
                     {showColumnSelector && showColumnComponent()}
@@ -826,187 +861,187 @@ export default function ProductFilter() {
 
 
                   <tbody className="bg-white divide-y divide-gray-200">
-        {products.map((product) => {
-          const isEditing = editingId === product.id;
-          return (
-            <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
+                    {products.map((product) => {
+                      const isEditing = editingId === product.id;
+                      return (
+                        <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
 
-              <td className="px-4 py-3">
-                <input type="checkbox" />
-              </td>
+                          <td className="px-4 py-3">
+                            <input type="checkbox" />
+                          </td>
 
-              <td className="px-10 py-3">
-                {isEditing ? (
-                  <div id='Btn-actions' className='flex gap-2'>
-                    <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save /></button>
-                    <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff /></button>
-                  </div>
+                          <td className="px-10 py-3">
+                            {isEditing ? (
+                              <div id='Btn-actions' className='flex gap-2'>
+                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save /></button>
+                                <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff /></button>
+                              </div>
 
-                ) : (
-                  <button onClick={() => startEdit(product)} className="bg-main-color-50 p-2 rounded-lg">
-                    <Pencil className='w-4 h-5'/>
-                  </button>
-                )}
-              </td>
+                            ) : (
+                              <button onClick={() => startEdit(product)} className="bg-main-color-50 p-2 rounded-lg">
+                                <Pencil className='w-4 h-5'/>
+                              </button>
+                            )}
+                          </td>
 
-              {/* Campos directos */}
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    name="code"
-                    value={editData.code}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.code
-                )}
-              </td>
+                          {/* Campos directos */}
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                name="code"
+                                value={editData.code}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.code
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    name="name"
-                    value={editData.name}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.name
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                name="name"
+                                value={editData.name}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.name
+                            )}
+                          </td>
 
-              {/* Campos relacionales */}
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <select
-                    name="winery_id"
-                    value={editData.winery_id || ""}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar</option>
-                    {filterOptions.wineries.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getOptionName("wineries", product.winery_id)
-                )}
-              </td>
+                          {/* Campos relacionales */}
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <select
+                                name="winery_id"
+                                value={editData.winery_id || ""}
+                                onChange={handleChange}
+                              >
+                                <option value="">Seleccionar</option>
+                                {filterOptions.wineries.map((w) => (
+                                  <option key={w.id} value={w.id}>
+                                    {w.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              getOptionName("wineries", product.winery_id)
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <select
-                    name="category_id"
-                    value={editData.category_id || ""}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar</option>
-                    {filterOptions.types.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getOptionName("types", product.category_id)
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <select
+                                name="category_id"
+                                value={editData.category_id || ""}
+                                onChange={handleChange}
+                              >
+                                <option value="">Seleccionar</option>
+                                {filterOptions.types.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              getOptionName("types", product.category_id)
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <select
-                    name="denomination_id"
-                    value={editData.denomination_id || ""}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar</option>
-                    {filterOptions.denominations.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getOptionName("denominations", product.denomination_id)
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <select
+                                name="denomination_id"
+                                value={editData.denomination_id || ""}
+                                onChange={handleChange}
+                              >
+                                <option value="">Seleccionar</option>
+                                {filterOptions.denominations.map((d) => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              getOptionName("denominations", product.denomination_id)
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <select
-                    name="vintage_id"
-                    value={editData.vintage_id || ""}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar</option>
-                    {filterOptions.vintages.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getOptionName("vintages", product.vintage_id)
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <select
+                                name="vintage_id"
+                                value={editData.vintage_id || ""}
+                                onChange={handleChange}
+                              >
+                                <option value="">Seleccionar</option>
+                                {filterOptions.vintages.map((v) => (
+                                  <option key={v.id} value={v.id}>
+                                    {v.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              getOptionName("vintages", product.vintage_id)
+                            )}
+                          </td>
 
-              {/* Otros campos directos */}
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    name="format"
-                    value={editData.format || ""}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.format
-                )}
-              </td>
+                          {/* Otros campos directos */}
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                name="format"
+                                value={editData.format || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.format
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    name="price"
-                    value={editData.price || ""}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.price
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                name="price"
+                                value={editData.price || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.price
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    name="blend"
-                    value={editData.blend || ""}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.blend
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                name="blend"
+                                value={editData.blend || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.blend
+                            )}
+                          </td>
 
-              <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                {isEditing ? (
-                  <input
-                    type="number"
-                    name="rating"
-                    value={editData.rating || ""}
-                    onChange={handleChange}
-                  />
-                ) : (
-                  product.rating
-                )}
-              </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                name="rating"
+                                value={editData.rating || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.rating
+                            )}
+                          </td>
 
 
-            </tr>
-          );
-        })}
-      </tbody>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                   </table>
                   
                   <div className="flex justify-end mb-3">
