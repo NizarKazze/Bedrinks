@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save, Funnel } from 'lucide-react';
+import { Search, Wine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
@@ -18,11 +18,58 @@ export default function ProductFilter() {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
+  const [isCreatingProposal, setIsCreatingProposal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [proposals, setProposals] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const sampleClients = [
+    { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone: '+34 600 123 456', company: 'Tech Solutions SL' },
+    { id: 2, name: 'María García', email: 'maria@email.com', phone: '+34 600 789 012', company: 'Innovación Digital' },
+    { id: 3, name: 'Carlos López', email: 'carlos@email.com', phone: '+34 600 345 678', company: 'Consultoría Pro' }
+  ];
+
+  const updateQuantity = (productId, quantity) => {
+    setSelectedProducts(selectedProducts.map(p => 
+      p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
+    ));
+  };
+
+    const calculateTotal = () => {
+    return selectedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  };
+
+
+  const saveProposal = () => {
+    if (!selectedClient || selectedProducts.length === 0) {
+      alert('Selecciona un cliente y al menos un producto');
+      return;
+    }
+
+    const newProposal = {
+      id: Date.now(),
+      clientId: selectedClient.id,
+      clientName: selectedClient.name,
+      date: new Date().toLocaleDateString('es-ES'),
+      products: [...selectedProducts],
+      total: calculateTotal(),
+      status: 'Pendiente'
+    };
+
+    setProposals([newProposal, ...proposals]);
+    setSelectedProducts([]);
+    alert('¡Propuesta guardada exitosamente!');
+  };
+
+  const getClientProposals = () => {
+    if (!selectedClient) return [];
+    return proposals.filter(p => p.clientId === selectedClient.id);
+  };
+
   // Estados para colapsar paneles
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
 
-  console.log(selectedProducts)
 
     const removeProduct = (id) => {
     setSelectedProducts(selectedProducts.filter((item) => item !== id));
@@ -438,10 +485,10 @@ const getOptionName = (category, id) => {
       const firstName = fullPath[0];
 
       const colorScale = firstName === 'Vino'
-        ? ['bg-orange-400', 'bg-orange-300', 'bg-orange-200', 'bg-orange-100']
+        ? ['bg-orange-300', 'bg-orange-200', 'bg-orange-100', 'bg-orange-100']
         : firstName === 'Whisky'
-        ? ['bg-blue-400', 'bg-blue-300', 'bg-blue-200', 'bg-blue-100']
-        : ['bg-blue-400', 'bg-blue-300', 'bg-blue-200', 'bg-blue-100'];
+        ? ['bg-blue-300', 'bg-blue-200', 'bg-blue-100', 'bg-blue-100']
+        : ['bg-blue-300', 'bg-blue-200', 'bg-blue-200', 'bg-blue-100'];
 
       return fullPath.map((name, index) => (
         <span
@@ -669,24 +716,6 @@ const getOptionName = (category, id) => {
                   />
                 </div>
               </div>
-                  <div style={{ padding: "20px" }}>
-                    <h2>Selected Products</h2>
-
-                    {selectedProducts.length === 0 ? (
-                      <p>No hay productos seleccionados</p>
-                    ) : (
-                      <ul>
-                        {selectedProducts.map((id) => (
-                          <li key={id}>
-                            {id}{" "}
-                            <button onClick={() => removeProduct(id)} style={{ color: "red" }}>
-                              Eliminar
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
             </div>
             
           )}
@@ -769,7 +798,6 @@ const getOptionName = (category, id) => {
                       </th>
                       <th className="px-10 py-3">Acciones</th>
 
-                      {/* Atributos únicos → búsqueda directa */}
                       <ProductTableHeader
                         item="code"
                         label="Código"
@@ -792,7 +820,6 @@ const getOptionName = (category, id) => {
                         setProducts={setProducts}
                       />
 
-                      {/* Campos relacionales → filtros */}
                       <ProductTableHeader
                         item="winery"
                         label="Bodega"
@@ -837,7 +864,6 @@ const getOptionName = (category, id) => {
                         setProducts={setProducts}
                       />
 
-                      {/* Atributos directos → sin filtros */}
                       <ProductTableHeader
                         item="format"
                         label="Formato"
@@ -890,14 +916,17 @@ const getOptionName = (category, id) => {
                     {products.map((product) => {
                       const isEditing = editingId === product.id;
 
-                            const handleCheckboxChangeProducts = () => {
-      if (selectedProducts.includes(product.id)) {
-        setSelectedProducts(selectedProducts.filter((id) => id !== product.id));
-      } else {
-        setSelectedProducts([...selectedProducts, product.id]);
-      }
-    };
-  
+                      const handleCheckboxChangeProducts = () => {
+                        const isSelected = selectedProducts.some((p) => p.id === product.id);
+
+                        if (isSelected) {
+                          setSelectedProducts(
+                            selectedProducts.filter((p) => p.id !== product.id)
+                          );
+                        } else {
+                          setSelectedProducts([...selectedProducts, product]);
+                        }
+                      };
 
                       return (
                         <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
@@ -1085,14 +1114,6 @@ const getOptionName = (category, id) => {
                   </tbody>
                   </table>
                   
-                  <div className="flex justify-end mb-3">
-                    <button
-                      onClick={handleAddProducts}
-                      className="px-4 py-2 bg-main-color-50 mr-4 my-6 rounded-lg"
-                    >
-                      Añadir productos
-                    </button>
-                  </div>
       
                 </div>
               )}
@@ -1100,6 +1121,186 @@ const getOptionName = (category, id) => {
           </div>
         </div>
       </div>
+
+      <div className="min-h-screen  p-6">
+      <div className="max-w-7xl mx-auto">
+
+        <div id='proposal-title' className='flex items-center mb-8 gap-2'>
+          <FileText></FileText>
+          <h1 className="text-3xl text-gray-800">Sistema de Propuestas</h1>
+        </div>
+
+        <div className="gap-6">
+          <div className="lg:col-span-1 space-y-6 mb-8">
+            
+            {/* Selección de cliente */}
+            <div className="bg-white rounded-lg border p-6">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Seleccionar Cliente
+              </h2>
+              <div className="space-y-2">
+                {sampleClients.map(client => (
+                  <button
+                    key={client.id}
+                    onClick={() => setSelectedClient(client)}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                      selectedClient?.id === client.id
+                        ? 'border-orange-300 bg-orange-50'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <p className="font-medium">{client.name}</p>
+                    <p className="text-sm text-gray-600">{client.company}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Panel derecho: Vista previa de la propuesta */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg border p-8">
+              {/* Detalles del cliente */}
+              <div className="mb-8">
+                <div className="flex justify-between items-start mb-6">
+                  <div >
+                    <div className='flex justify-between items-center mb-4'>
+                    <h2 className="text-2xl text-gray-800">Detalles de la Propuesta</h2>
+
+                    {selectedClient && (
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <History className="w-4 h-4" />
+                      Historial ({getClientProposals().length})
+                    </button>
+                  )}
+                    </div>
+                    {selectedClient ? (
+                      <div className="w-full bg-orange-50 p-4 rounded-lg border-l-4 border-orange-300">
+                        <p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
+                        <p className="text-gray-600">{selectedClient.company}</p>
+                        <p className="text-sm text-gray-600 mt-2">{selectedClient.email}</p>
+                        <p className="text-sm text-gray-600">{selectedClient.phone}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
+                        <p className="text-gray-500">Selecciona un cliente para comenzar</p>
+                      </div>
+                    )}
+                  </div>
+                  
+
+                </div>
+
+                {/* Historial de propuestas */}
+                {showHistory && selectedClient && (
+                  <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-3">Historial de Propuestas</h3>
+                    {getClientProposals().length === 0 ? (
+                      <p className="text-gray-500 text-sm">No hay propuestas anteriores</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {getClientProposals().map(proposal => (
+                          <div key={proposal.id} className="bg-white p-3 rounded border">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium text-sm">Propuesta #{proposal.id}</p>
+                                <p className="text-xs text-gray-600">{proposal.date}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-orange-400 mb-2">${proposal.total}</p>
+                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                  {proposal.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Productos seleccionados */}
+              <div>
+                <h2 className="text-2xl mb-4 flex items-center gap-2">
+                  <Package />
+                  Productos Seleccionados
+                </h2>
+                
+                {selectedProducts.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500">No hay productos seleccionados</p>
+                    <p className="text-sm text-gray-400 mt-2">Añade productos desde el catálogo</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto mb-6">
+                      <table className="bg-white border rounded-lg overflow-hidden">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Código</th>
+                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Producto</th>
+                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Precio</th>
+                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Cantidad</th>
+                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Subtotal</th>
+                            <th className="py-3 px-4 text-center font-semibold text-gray-700">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedProducts.map((product) => (
+                            <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-4 text-sm">{product.code}</td>
+                              <td className="py-3 px-4 whitespace-nowrap">{product.name}</td>
+                              <td className="py-3 px-4 font-medium">${product.price}</td>
+                              <td className="py-3 px-4">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={product.quantity}
+                                  onChange={(e) => updateQuantity(product.id, parseInt(e.target.value))}
+                                  className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-orange-400">
+                                ${product.price * product.quantity}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <button
+                                  onClick={() => removeProduct(product.id)}
+                                  className="text-red-500 hover:text-red-700 font-medium transition-colors"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="border-t pt-6">                      
+                      <button
+                        onClick={saveProposal}
+                        className="w-full bg-orange-300 hover:bg-orange-400 text-white font-semibold py-3 rounded-lg transition-colors "
+                      >
+                        Guardar Propuesta
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     </div>
   );
 }

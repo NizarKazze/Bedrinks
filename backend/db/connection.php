@@ -3,7 +3,7 @@ function Conectiondb() {
     $host = 'localhost';
     $dbname = 'beverages_db';
     $user = 'root';
-    $pass = '';
+    $pass = 'root';
 
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
