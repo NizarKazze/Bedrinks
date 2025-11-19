@@ -63,7 +63,7 @@ switch ($action) {
         break;
     case 'update_product':
         echo json_encode(update_product());
-        break;       
+        break;      
     default:
         echo json_encode(['error' => 'Invalid action']);
 }

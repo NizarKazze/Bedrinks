@@ -480,4 +480,22 @@ function update_product() {
         return json_encode(['error' => 'Error al actualizar: ' . $e->getMessage()]);
     }
 }
+
+function get_clients() {
+    $pdo = Conectiondb();
+
+    try {
+        $stmt = $pdo->query("
+            SELECT id, name, email, phone, address, created_at
+            FROM clients
+            ORDER BY name
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
 ?>

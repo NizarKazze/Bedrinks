@@ -174,7 +174,7 @@ CREATE TABLE proposal_products (
   quantity INT DEFAULT 1,
   price DECIMAL(10,2) DEFAULT 0,
   FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE,
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+  FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
 );
 
 
@@ -327,3 +327,7 @@ INSERT INTO box (product_id, units, box_price) VALUES
 (9, 6, 360.00),
 (11, 12, 260.00),
 (13, 6, 110.00);
+
+ALTER TABLE product
+ADD COLUMN coste DECIMAL(10,2) DEFAULT 0,
+ADD COLUMN estado VARCHAR(20) DEFAULT 'activo';

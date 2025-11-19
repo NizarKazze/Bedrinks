@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Wine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
@@ -8,7 +8,7 @@ import { LoadingComponent } from '../Components/UI/UIHelpers';
 import { ProductTableHeader } from '../Components/UI/ProductTableUI';
 import { ProductsNotFound } from '../Components/UI/UIHelpers';
 
-
+import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -18,22 +18,132 @@ export default function ProductFilter() {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
-  const [isCreatingProposal, setIsCreatingProposal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [proposals, setProposals] = useState([]);
+
+  // Filtro 
+
+  const [filters, setFilters] = useState({
+    category_id: [],
+    denomination_id: [],
+    winery_id: [],
+    vintage_id: [],
+    supplier_id: []
+  });
+
+  const [filterOptions, setFilterOptions] = useState({
+    types: [],
+    denominations: [],
+    wineries: [],
+    vintages: [],
+    suppliers: []
+  });
+
+  const [clients, setClients] = useState([]);
+
+  // View controller
+  const [isCreatingProposal, setIsCreatingProposal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  const sampleClients = [
-    { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone: '+34 600 123 456', company: 'Tech Solutions SL' },
-    { id: 2, name: 'María García', email: 'maria@email.com', phone: '+34 600 789 012', company: 'Innovación Digital' },
-    { id: 3, name: 'Carlos López', email: 'carlos@email.com', phone: '+34 600 345 678', company: 'Consultoría Pro' }
-  ];
+  const [visibleColumns, setVisibleColumns] = useState({
+    code: true,
+    name: true,
+    winery: true,
+    category: true,
+    denomination: true,
+    vintage: false,
+    format: true,
+    price: true,
+    blend: false,
+    rating: true,
+    coste: true,
+  });
 
-  const updateQuantity = (productId, quantity) => {
-    setSelectedProducts(selectedProducts.map(p => 
-      p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
-    ));
-  };
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  /* ======= Obtener Datos ======== */
+
+  const { data: countryData } = useFetch(
+    `backend/filters.php?action=countries`
+  );
+  const { data: denominationData } = useFetch(
+    `backend/filters.php?action=denominations`
+  );
+  const { data: supplierData } = useFetch(
+    `backend/filters.php?action=suppliers`
+  );
+  const { data: categoryData } = useFetch(
+    `backend/filters.php?action=category`
+  );
+  const { data: winerieData } = useFetch(
+    `backend/filters.php?action=wineries`
+  );
+  const { data: vintageData } = useFetch(
+    `backend/filters.php?action=vintage`
+  );
+  const { data: clientData, error } = useFetch(
+    "backend/propuesta.php?action=get-all-clients"
+  );
+  
+  /**
+   * Actualizar estados al recibir los datos del backend
+   */
+
+  useEffect(() => {
+    if (clientData) {
+      setClients(clientData);
+    }
+  }, [clientData]);
+
+  useEffect(() => {
+    if (denominationData && denominationData.length > 0) {
+      setFilterOptions(prev => ({
+        ...prev,
+        denominations: denominationData.map(denomination => ({id: denomination.id, name: denomination.name}))
+      }));
+    }
+  }, [denominationData])
+
+  useEffect(() => {
+    if (supplierData && supplierData.length > 0) {
+      setFilterOptions(prev => ({
+        ...prev,
+        suppliers: supplierData.map(supplier => ({id: supplier.id, name: supplier.name}))
+      }));
+    }
+  }, [supplierData])
+
+  useEffect(() => {
+    if (winerieData && winerieData.length > 0 ) {
+      setFilterOptions(prev => ({
+        ...prev,
+        wineries: winerieData.map(winerie => ({id: winerie.id, name: winerie.name}))
+      }))
+    }
+  }, [winerieData])
+
+  useEffect(() => {
+    if (vintageData && vintageData.length > 0 ) {
+      setFilterOptions(prev => ({
+        ...prev,
+        vintages: vintageData.map(vintage => ({id: vintage.id, name: vintage.name}))
+      }))
+    }
+  }, [vintageData])
+
+  useEffect(() => {
+    if (categoryData && categoryData.length > 0 ) {
+      setFilterOptions(prev => ({
+        ...prev,
+        types: categoryData.map(category => ({id: category.id, name: category.name}))
+      }))
+    }
+  }, [categoryData])
+
+
+
+
+
 
     const calculateTotal = () => {
     return selectedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
@@ -142,18 +252,7 @@ const saveEdit = async () => {
 
 
 
-  const [visibleColumns, setVisibleColumns] = useState({
-    code: true,
-    name: true,
-    winery: true,
-    category: true,
-    denomination: true,
-    vintage: false,
-    format: true,
-    price: true,
-    blend: false,
-    rating: true,
-  });
+
 
   const [Columns, setColumns] = useState({
     code: 'code',
@@ -167,7 +266,6 @@ const saveEdit = async () => {
     blend: 'blend'
   });
   
-  const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   const toggleShowColumn = (columnName) => {
     setVisibleColumns(prev => ({
@@ -233,13 +331,7 @@ const saveEdit = async () => {
     supplier_id: false
   });
 
-  const [filters, setFilters] = useState({
-    category_id: [],
-    denomination_id: [],
-    winery_id: [],
-    vintage_id: [],
-    supplier_id: []
-  });
+
 
   const applyCategoryFilter = (parentID) => {
     if (!categoryData) return;
@@ -252,80 +344,12 @@ const saveEdit = async () => {
     }));
   };
 
-  /* ======= Obtener Datos ======== */
-
-  const { data: countryData } = useFetch(
-    `backend/filters.php?action=countries`
-  );
-  const { data: denominationData } = useFetch(
-    `backend/filters.php?action=denominations`
-  );
-  const { data: supplierData } = useFetch(
-    `backend/filters.php?action=suppliers`
-  );
-  const { data: categoryData } = useFetch(
-    `backend/filters.php?action=category`
-  );
-  const { data: winerieData } = useFetch(
-    `backend/filters.php?action=wineries`
-  );
-  const { data: vintageData } = useFetch(
-    `backend/filters.php?action=vintage`
-  );
 
 
-  const [filterOptions, setFilterOptions] = useState({
-    types: [],
-    denominations: [],
-    wineries: [],
-    vintages: [],
-    suppliers: []
-  });
 
-  useEffect(() => {
-    if (denominationData && denominationData.length > 0) {
-      setFilterOptions(prev => ({
-        ...prev,
-        denominations: denominationData.map(denomination => ({id: denomination.id, name: denomination.name}))
-      }));
-    }
-  }, [denominationData])
 
-  useEffect(() => {
-    if (supplierData && supplierData.length > 0) {
-      setFilterOptions(prev => ({
-        ...prev,
-        suppliers: supplierData.map(supplier => ({id: supplier.id, name: supplier.name}))
-      }));
-    }
-  }, [supplierData])
 
-  useEffect(() => {
-    if (winerieData && winerieData.length > 0 ) {
-      setFilterOptions(prev => ({
-        ...prev,
-        wineries: winerieData.map(winerie => ({id: winerie.id, name: winerie.name}))
-      }))
-    }
-  }, [winerieData])
 
-  useEffect(() => {
-    if (vintageData && vintageData.length > 0 ) {
-      setFilterOptions(prev => ({
-        ...prev,
-        vintages: vintageData.map(vintage => ({id: vintage.id, name: vintage.name}))
-      }))
-    }
-  }, [vintageData])
-
-  useEffect(() => {
-    if (categoryData && categoryData.length > 0 ) {
-      setFilterOptions(prev => ({
-        ...prev,
-        types: categoryData.map(category => ({id: category.id, name: category.name}))
-      }))
-    }
-  }, [categoryData])
 
   const clearFilters = () => {
     setFilters({
@@ -399,6 +423,14 @@ const saveEdit = async () => {
     });
   };
   
+  const [search, setSearch] = useState("");
+  const filteredClients = useMemo(() => {
+    if (!search) return clients;
+    return clients.filter(client =>
+      client.name.toLowerCase().includes(search.toLowerCase()) ||
+      client.company.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search, clients]);
 
   /* Cambia el estado de 'expandedFilters' */
 
@@ -875,16 +907,7 @@ const getOptionName = (category, id) => {
                         setProducts={setProducts}
                       />
 
-                      <ProductTableHeader
-                        item="price"
-                        label="Precio"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
+
 
                       <ProductTableHeader
                         item="blend"
@@ -908,6 +931,28 @@ const getOptionName = (category, id) => {
                         setProducts={setProducts}
                         
                       />
+
+                      <ProductTableHeader
+                        item="price"
+                        label="Precio"
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                        setProducts={setProducts}
+                      />
+
+                      <ProductTableHeader
+                        item="coste"
+                        label="Coste"
+                        hasInput={true}
+                        isHidden={isHidden}
+                        setFilters={setFilters}
+                        fetchSearch={fetchSearch}
+                        addFilter={addFilter}
+                        setProducts={setProducts}
+                      />
                     </tr>
                   </thead>
 
@@ -927,6 +972,11 @@ const getOptionName = (category, id) => {
                           setSelectedProducts([...selectedProducts, product]);
                         }
                       };
+
+                      const margenEuros = product.price - product.coste;
+                      const margenPorc = product.coste > 0 ? (margenEuros / product.coste) * 100 : 0;
+                      const precioPVPIVA = product.price * (1 + (product.iva / 100));
+                  
 
                       return (
                         <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
@@ -955,7 +1005,7 @@ const getOptionName = (category, id) => {
                           </td>
 
                           {/* Campos directos */}
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("code") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
                                 name="code"
@@ -980,7 +1030,7 @@ const getOptionName = (category, id) => {
                           </td>
 
                           {/* Campos relacionales */}
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("winery") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <select
                                 name="winery_id"
@@ -999,7 +1049,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("category") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <select
                                 name="category_id"
@@ -1018,7 +1068,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("denomination") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <select
                                 name="denomination_id"
@@ -1037,7 +1087,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("vintages") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <select
                                 name="vintage_id"
@@ -1057,7 +1107,7 @@ const getOptionName = (category, id) => {
                           </td>
 
                           {/* Otros campos directos */}
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("format") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
                                 name="format"
@@ -1069,20 +1119,9 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                name="price"
-                                value={editData.price || ""}
-                                onChange={handleChange}
-                              />
-                            ) : (
-                              product.price
-                            )}
-                          </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("blend") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
                                 name="blend"
@@ -1094,7 +1133,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("name") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("rating") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
                                 type="number"
@@ -1105,6 +1144,45 @@ const getOptionName = (category, id) => {
                             ) : (
                               product.rating
                             )}
+                          </td>
+
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("price") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                name="price"
+                                value={editData.price || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.price
+                            )}
+                          </td>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("coste") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                name="coste"
+                                value={editData.coste || ""}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              product.coste
+                            )}
+                          </td>
+
+                                  {/* NUEVAS COLUMNAS CALCULADAS */}
+                          <td className="px-10 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {margenEuros.toFixed(2)} €
+                          </td>
+                          <td className="px-10 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {margenPorc.toFixed(2)} %
+                          </td>
+                          <td className="px-10 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {product.iva} %
+                          </td>
+                          <td className="px-10 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {precioPVPIVA.toFixed(2)} €
                           </td>
 
 
@@ -1131,34 +1209,45 @@ const getOptionName = (category, id) => {
         </div>
 
         <div className="gap-6">
-          <div className="lg:col-span-1 space-y-6 mb-8">
-            
-            {/* Selección de cliente */}
-            <div className="bg-white rounded-lg border p-6">
-              <h2 className="font-semibold mb-4 flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Seleccionar Cliente
-              </h2>
-              <div className="space-y-2">
-                {sampleClients.map(client => (
-                  <button
-                    key={client.id}
-                    onClick={() => setSelectedClient(client)}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                      selectedClient?.id === client.id
-                        ? 'border-orange-300 bg-orange-50'
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <p className="font-medium">{client.name}</p>
-                    <p className="text-sm text-gray-600">{client.company}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="lg:col-span-1 space-y-6 mb-8">
+      <div className="bg-white rounded-lg border p-6">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <User className="w-5 h-5" />
+          Seleccionar Cliente
+        </h2>
 
-          </div>
+        {/* Buscador */}
+        <input
+          type="text"
+          placeholder="Buscar cliente..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+        />
 
+        {/* Lista de clientes filtrados */}
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredClients.length > 0 ? (
+            filteredClients.map(client => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                  selectedClient?.id === client.id
+                    ? 'border-orange-300 bg-orange-50'
+                    : 'border-gray-200'
+                }`}
+              >
+                <p className="font-medium">{client.name}</p>
+                <p className="text-sm text-gray-600">{client.company}</p>
+              </button>
+            ))
+          ) : (
+            <p className="text-gray-400 text-sm">No se encontraron clientes</p>
+          )}
+        </div>
+      </div>
+    </div>
           {/* Panel derecho: Vista previa de la propuesta */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg border p-8">
@@ -1166,19 +1255,25 @@ const getOptionName = (category, id) => {
               <div className="mb-8">
                 <div className="flex justify-between items-start mb-6">
                   <div >
-                    <div className='flex justify-between items-center mb-4'>
-                    <h2 className="text-2xl text-gray-800">Detalles de la Propuesta</h2>
 
-                    {selectedClient && (
-                    <button
-                      onClick={() => setShowHistory(!showHistory)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    >
-                      <History className="w-4 h-4" />
-                      Historial ({getClientProposals().length})
-                    </button>
-                  )}
+                    <div className='w-full flex justify-between items-center mb-4'>
+                      <h2 className="text-2xl text-gray-800">Detalles de la Propuesta</h2>
+
+                      {selectedClient && (
+                        <button
+                          onClick={() => setShowHistory(!showHistory)}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          <History className="w-4 h-4" />
+                          Historial ({getClientProposals().length})
+                        </button>
+                      )}
                     </div>
+
+                    <div id='proposal-state' className='bg-yellow-100 inline-block py-1 px-2 rounded-lg mb-4'>
+                      pending
+                    </div>
+
                     {selectedClient ? (
                       <div className="w-full bg-orange-50 p-4 rounded-lg border-l-4 border-orange-300">
                         <p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
@@ -1212,7 +1307,7 @@ const getOptionName = (category, id) => {
                                 <p className="text-xs text-gray-600">{proposal.date}</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-semibold text-orange-400 mb-2">${proposal.total}</p>
+                                <p className="font-semibold mb-2">${proposal.total}</p>
                                 <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
                                   {proposal.status}
                                 </span>
@@ -1242,16 +1337,7 @@ const getOptionName = (category, id) => {
                   <>
                     <div className="overflow-x-auto mb-6">
                       <table className="bg-white border rounded-lg overflow-hidden">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Código</th>
-                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Producto</th>
-                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Precio</th>
-                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Cantidad</th>
-                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Subtotal</th>
-                            <th className="py-3 px-4 text-center font-semibold text-gray-700">Acción</th>
-                          </tr>
-                        </thead>
+                        <CustomTableHeader labels={["Código", "Producto", "Precio", "Cantidad", "Subtotal", "Acción"]} />
                         <tbody>
                           {selectedProducts.map((product) => (
                             <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
@@ -1262,13 +1348,12 @@ const getOptionName = (category, id) => {
                                 <input
                                   type="number"
                                   min="1"
-                                  value={product.quantity}
-                                  onChange={(e) => updateQuantity(product.id, parseInt(e.target.value))}
+                                  value={1}
                                   className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               </td>
-                              <td className="py-3 px-4 font-semibold text-orange-400">
-                                ${product.price * product.quantity}
+                              <td className="py-3 px-4 font-semibold ">
+                                ${product.price}
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <button
@@ -1284,10 +1369,10 @@ const getOptionName = (category, id) => {
                       </table>
                     </div>
 
-                    <div className="border-t pt-6">                      
+                    <div className="border-t pt-6 flex justify-end">                      
                       <button
                         onClick={saveProposal}
-                        className="w-full bg-orange-300 hover:bg-orange-400 text-white font-semibold py-3 rounded-lg transition-colors "
+                        className="w-2/4 bg-main-color hover:bg-orange-400 text-white py-2 rounded-lg transition-all "
                       >
                         Guardar Propuesta
                       </button>
