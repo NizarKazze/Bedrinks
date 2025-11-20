@@ -14,12 +14,16 @@ export default function ProductFilter() {
   const [products, setProducts] = useState()
   const [loading, setLoading] = useState(true)
   const [orderBy, setOrderBy] = useState('name')
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
+  // Propuesta
+
   const [selectedClient, setSelectedClient] = useState(null);
   const [proposals, setProposals] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [historyClient, setHistoryClient] = useState(null);
+
 
   // Filtro 
 
@@ -145,31 +149,41 @@ export default function ProductFilter() {
 
 
 
-    const calculateTotal = () => {
+  const calculateTotal = () => {
     return selectedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
   };
 
+  const { data: proposalData, send: sendProposal } = usePost("backend/propuesta.php?action=create-proposal");
 
-  const saveProposal = () => {
-    if (!selectedClient || selectedProducts.length === 0) {
-      alert('Selecciona un cliente y al menos un producto');
-      return;
-    }
+  const create_proposal = async () => {
+    const response = await sendProposal({
+      client_id: selectedClient.id,
+      products: selectedProducts.map(product => ({
+        product_id: product.id,
+        quantity: product.quantity,
+        price: product.price
+      }))
+    });
 
-    const newProposal = {
-      id: Date.now(),
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
-      date: new Date().toLocaleDateString('es-ES'),
-      products: [...selectedProducts],
-      total: calculateTotal(),
-      status: 'Pendiente'
-    };
-
-    setProposals([newProposal, ...proposals]);
-    setSelectedProducts([]);
-    alert('¡Propuesta guardada exitosamente!');
+    console.log(response);
   };
+
+const addProduct = (product) => {
+  setSelectedProducts((prev) => [
+    ...prev,
+    { ...product, quantity: 1 }
+  ]);
+};
+
+const updateQuantity = (id, newQuantity) => {
+  setSelectedProducts((prev) =>
+    prev.map((p) =>
+      p.id === id ? { ...p, quantity: Number(newQuantity) } : p
+    )
+  );
+};
+
+
 
   const getClientProposals = () => {
     if (!selectedClient) return [];
@@ -961,17 +975,28 @@ const getOptionName = (category, id) => {
                     {products.map((product) => {
                       const isEditing = editingId === product.id;
 
-                      const handleCheckboxChangeProducts = () => {
-                        const isSelected = selectedProducts.some((p) => p.id === product.id);
+                        const handleCheckboxChangeProducts = () => {
+                          const isSelected = selectedProducts.some((p) => p.id === product.id);
 
-                        if (isSelected) {
-                          setSelectedProducts(
-                            selectedProducts.filter((p) => p.id !== product.id)
-                          );
-                        } else {
-                          setSelectedProducts([...selectedProducts, product]);
-                        }
-                      };
+                          if (isSelected) {
+
+                            setSelectedProducts(
+                              selectedProducts.filter((p) => p.id !== product.id)
+                            );
+
+                          } else {
+
+                            setSelectedProducts([
+                              ...selectedProducts,
+                              { 
+                                ...product,
+                                quantity: 1,
+                              }
+                            ]);
+
+                          }
+                        };
+
 
                       const margenEuros = product.price - product.coste;
                       const margenPorc = product.coste > 0 ? (margenEuros / product.coste) * 100 : 0;
@@ -1371,7 +1396,7 @@ const getOptionName = (category, id) => {
 
                     <div className="border-t pt-6 flex justify-end">                      
                       <button
-                        onClick={saveProposal}
+                        onClick={create_proposal}
                         className="w-2/4 bg-main-color hover:bg-orange-400 text-white py-2 rounded-lg transition-all "
                       >
                         Guardar Propuesta

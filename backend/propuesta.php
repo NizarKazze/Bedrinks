@@ -4,7 +4,7 @@ require_once 'db/connection.php';
 
 // 🧩 ---------- PROPOSALS ----------
 
-// ✅ Create proposal
+// Create proposal
 function create_proposal($client_id, $products = []) {
     $pdo = Conectiondb();
     try {
