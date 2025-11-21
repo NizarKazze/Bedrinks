@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Wine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, Menu, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package} from 'lucide-react';
+import { Search, BottleWine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
@@ -23,6 +23,7 @@ export default function ProductFilter() {
   const [proposals, setProposals] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [historyClient, setHistoryClient] = useState(null);
+  
 
 
   // Filtro 
@@ -48,6 +49,10 @@ export default function ProductFilter() {
   // View controller
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
+  const [showOrderSelector, setshowOrderSelector] = useState(false);
+
 
   const [visibleColumns, setVisibleColumns] = useState({
     code: true,
@@ -61,6 +66,11 @@ export default function ProductFilter() {
     blend: false,
     rating: true,
     coste: true,
+    margen_euro: true,
+    margen_porcentaje: true,
+    iva: true,
+    tarifa: true,
+
   });
 
   const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -144,14 +154,35 @@ export default function ProductFilter() {
     }
   }, [categoryData])
 
+  // ============ Controladores de vistas
 
-
-
-
-
-  const calculateTotal = () => {
-    return selectedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  const toggleProposalExpanded = () => {
+    setIsCreatingProposal(prev => !prev);
   };
+  
+  const viewTarif = () => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      winery: false,
+      format: false,
+      denomination: false,
+      rating: false,
+      category: false
+    }));
+  };
+
+  const showAllColumns = () => {
+    setVisibleColumns(prev => {
+      const allTrue = {};
+      for (const key in prev) {
+        allTrue[key] = true;
+      }
+      return allTrue;
+    });
+  };
+  
+
+  // ============== Funcionamiento propuestas ================
 
   const { data: proposalData, send: sendProposal } = usePost("backend/propuesta.php?action=create-proposal");
 
@@ -168,57 +199,27 @@ export default function ProductFilter() {
     console.log(response);
   };
 
-const addProduct = (product) => {
-  setSelectedProducts((prev) => [
-    ...prev,
-    { ...product, quantity: 1 }
-  ]);
-};
-
-const updateQuantity = (id, newQuantity) => {
-  setSelectedProducts((prev) =>
-    prev.map((p) =>
-      p.id === id ? { ...p, quantity: Number(newQuantity) } : p
-    )
-  );
-};
-
-
-
   const getClientProposals = () => {
     if (!selectedClient) return [];
     return proposals.filter(p => p.clientId === selectedClient.id);
   };
 
-  // Estados para colapsar paneles
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
 
 
-    const removeProduct = (id) => {
-    setSelectedProducts(selectedProducts.filter((item) => item !== id));
-  };
-  
-
-  const handleSelect = (productId) => {
-    setSelectedProducts((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
+  const removeProduct = (id) => {
+    setSelectedProducts(selectedProducts.filter((item) => item.id !== id));
   };
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedProducts(products.map((p) => p.id));
+      setSelectedProducts(products);
     } else {
       setSelectedProducts([]);
     }
   };
 
-  const handleAddProducts = () => {
-    console.log("Productos seleccionados:", selectedProducts);
-  };
+
+  // Edición inline
 
   const startEdit = (product) => {
     setEditingId(product.id);
@@ -312,7 +313,6 @@ const saveEdit = async () => {
 
   const isHidden = (columnName) => !visibleColumns[columnName];
 
-  const [showOrderSelector, setshowOrderSelector] = useState(false);
 
   const ShowOrderBy = () => {
     return (
@@ -441,8 +441,7 @@ const saveEdit = async () => {
   const filteredClients = useMemo(() => {
     if (!search) return clients;
     return clients.filter(client =>
-      client.name.toLowerCase().includes(search.toLowerCase()) ||
-      client.company.toLowerCase().includes(search.toLowerCase())
+      client.name.toLowerCase().includes(search.toLowerCase())
     );
   }, [search, clients]);
 
@@ -532,7 +531,7 @@ const getOptionName = (category, id) => {
 
       const colorScale = firstName === 'Vino'
         ? ['bg-orange-300', 'bg-orange-200', 'bg-orange-100', 'bg-orange-100']
-        : firstName === 'Whisky'
+        : firstName === 'Destilados'
         ? ['bg-blue-300', 'bg-blue-200', 'bg-blue-100', 'bg-blue-100']
         : ['bg-blue-300', 'bg-blue-200', 'bg-blue-200', 'bg-blue-100'];
 
@@ -669,28 +668,29 @@ const getOptionName = (category, id) => {
         
         {isSidebarCollapsed ? (
           <div className="flex flex-col items-center gap-4 mt-4">
-            <a href="/main-control-panel" className="p-3 hover:bg-gray-100 rounded-lg" title="Panel Principal">
-              <Menu className="w-5 h-5" />
+            <a href="#" className="p-3 hover:bg-gray-100 rounded-lg" title="Panel Principal">
+            <House />
             </a>
             <a href="/product-control-panel" className="p-3 hover:bg-gray-100 rounded-lg" title="Gestión de productos">
-              <Wine className="w-5 h-5" />
+            <BottleWine />
             </a>
-            <a href="#" className="p-3 hover:bg-gray-100 rounded-lg" title="Crear Propuesta">
-              <Search className="w-5 h-5" />
-            </a>
+            <button onClick={toggleProposalExpanded} className="p-3 hover:bg-gray-100 rounded-lg" title="Crear Propuesta">
+            <FileText />
+            </button>
           </div>
         ) : (
           <div className="p-4 flex flex-col gap-4">
-            <a href="/main-control-panel" className='mb-4 mt-4'>Panel Principal</a>
+            <a href="#" className='mb-4 mt-4'>Panel Principal</a>
             <a href="/product-control-panel" className='mb-4'>Gestión de productos</a>
-            <a href="#">Crear Propuesta</a>
+            <button onClick={toggleProposalExpanded}>Crear Propuesta</button>
           </div>
         )}
       </div>
 
-      <div className="w-full mx-auto px-16 mt-10">
+      <div className="w-full mx-auto px-8 mt-6 ">
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
           {/* Panel de Filtros Colapsable */}
           {!isFilterPanelCollapsed && (
             <div className="lg:col-span-1">
@@ -767,48 +767,50 @@ const getOptionName = (category, id) => {
           )}
 
           {/* Tabla de Productos */}
-          <div className={`lg:col-span-3 min-w-0 transition-all duration-300 ${isFilterPanelCollapsed ? 'lg:col-span-4' : ''}`}>
+          <div className={` lg:col-span-3 min-w-0 transition-all duration-300 ${isFilterPanelCollapsed ? 'lg:col-span-4' : ''} `}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">
-                  Productos
-                  <span className="text-main-color ml-2">{products && products.length > 0 ? products.length : 0}</span>
-                </h2>
-                
-                <div className='flex gap-2'>
-                    <button className='bg-orange-300 p-2 rounded-lg' onClick={() => applyCategoryFilter(1)}>Vinos</button>
-                    <button className='bg-orange-300 p-2 rounded-lg'> Destilados</button>
+            <div className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold text-gray-900 flex-shrink-0">
+                Productos
+                <span className="text-main-color ml-2">{products?.length || 0}</span>
+              </h2>
 
-                  {isFilterPanelCollapsed && (
-                    <button
-                      onClick={() => setIsFilterPanelCollapsed(false)}
-                      className="flex items-center gap-2  px-4 py-2 rounded-lg transition-colors"
-                      title="Mostrar filtros"
-                    >
-                      <span className="text-sm text-gray-700 font-medium"><Funnel></Funnel></span>
-                      {totalActiveFilters > 0 && (
-                        <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                          {totalActiveFilters}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
+              <div className="flex flex-wrap gap-2  justify-end min-w-0">
+                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => viewTarif()}>Tarifas</button>
+                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(1)}>Vinos</button>
+                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(13)}>Destilados</button>
+                <button className="bg-gray-100 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => { clearFilters(); showAllColumns(); }}>Resetear Vista</button>
 
+                {isFilterPanelCollapsed && (
+                  <button
+                    onClick={() => setIsFilterPanelCollapsed(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
+                    title="Mostrar filtros"
+                  >
+                    <span className="text-sm text-gray-700 font-medium"><Funnel /></span>
+                    {totalActiveFilters > 0 && (
+                      <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                        {totalActiveFilters}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
+            </div>
+
 
               <div id='search-container' className='p-4 border-b border-gray-200 flex justify-end'>
                 <div className='flex gap-2'>
                   <div >
-                    <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setShowColumnSelector(prev => !prev)}>
+                    <button className='flex gap-2 bg-gray-100 p-2 items-center rounded-lg text-sm' onClick={() => setShowColumnSelector(prev => !prev)}>
                     <ChartNoAxesColumnDecreasing /> columnas
                     </button>
 
                     {showColumnSelector && showColumnComponent()}
                   </div>
                   <div className=''>
-                    <button className='flex gap-2 bg-gray-100 p-4 rounded-lg' onClick={() => setshowOrderSelector(prev => !prev)}>
+                    <button className='flex gap-2 bg-gray-100 p-2 rounded-lg' onClick={() => setshowOrderSelector(prev => !prev)}>
                     <ArrowUpDown />
                     </button>
 
@@ -819,19 +821,21 @@ const getOptionName = (category, id) => {
               </div>
 
               {loading ? (
-
                 <LoadingComponent></LoadingComponent>
+                
               ) : products && products.length === 0 ? (
+
                 <div className="text-center py-16">
                   <ProductsNotFound clearFilters={clearFilters}></ProductsNotFound>
-
                 </div>
+
               ) : (
-                <div className="overflow-x-auto w-full">
+                <div className="overflow-x-auto w-full product-table overflow-y-auto">
                   <table className="min-w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      {/* Checkbox de seleccionar todos */}
+
+                      {/* Checkbox; SelectAll */}
                       <th className="px-4 py-3 text-left">
                         <input
                           type="checkbox"
@@ -842,176 +846,84 @@ const getOptionName = (category, id) => {
                           onChange={(e) => handleSelectAll(e.target.checked)}
                         />
                       </th>
-                      <th className="px-10 py-3">Acciones</th>
+                      
+                      <th className="text-sm">Acciones</th>
 
-                      <ProductTableHeader
-                        item="code"
-                        label="Código"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
+                      {[
+                        { item: "code", label: "Código", hasInput: true },
+                        { item: "name", label: "Nombre", hasInput: true },
+                        { item: "winery", label: "Bodega", hasInput: true },
+                        { item: "category", label: "Tipo", hasInput: true },
+                        { item: "denomination", label: "D.O.", hasInput: true },
+                        { item: "vintage", label: "Añada", hasInput: true },
+                        { item: "format", label: "Formato", hasInput: true },
+                        { item: "blend", label: "Blend", hasInput: true },
+                        { item: "rating", label: "Rating", hasInput: true },
+                        { item: "price", label: "Precio", hasInput: true },
+                        { item: "coste", label: "Coste", hasInput: true },
+                        { item: "margen_euro", label: "MGN€", hasInput: true },
+                        { item: "margen_porcentaje", label: "MGN%", hasInput: true },
+                        { item: "iva", label: "IVA", hasInput: true },
+                        { item: "tarifa", label: "TARIFA", hasInput: false },
+                      ].map(({ item, label, hasInput }) => (
+                        <ProductTableHeader
+                          key={item}
+                          item={item}
+                          label={label}
+                          hasInput={hasInput}
+                          isHidden={isHidden}
+                          setFilters={setFilters}
+                          fetchSearch={fetchSearch}
+                          addFilter={addFilter}
+                          setProducts={setProducts}
+                        />
+                      ))}
 
-                      <ProductTableHeader
-                        item="name"
-                        label="Nombre"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="winery"
-                        label="Bodega"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="category"
-                        label="Tipo"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="denomination"
-                        label="D.O."
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="vintage"
-                        label="Añada"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="format"
-                        label="Formato"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-
-
-                      <ProductTableHeader
-                        item="blend"
-                        label="Blend"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="rating"
-                        label="Rating"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                        
-                      />
-
-                      <ProductTableHeader
-                        item="price"
-                        label="Precio"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
-
-                      <ProductTableHeader
-                        item="coste"
-                        label="Coste"
-                        hasInput={true}
-                        isHidden={isHidden}
-                        setFilters={setFilters}
-                        fetchSearch={fetchSearch}
-                        addFilter={addFilter}
-                        setProducts={setProducts}
-                      />
                     </tr>
                   </thead>
 
 
                   <tbody className="bg-white divide-y divide-gray-200">
+
                     {products.map((product) => {
                       const isEditing = editingId === product.id;
 
-                        const handleCheckboxChangeProducts = () => {
-                          const isSelected = selectedProducts.some((p) => p.id === product.id);
+                      const handleCheckboxChangeProducts = (product) => {
+                        const exists = selectedProducts.find((p) => p.id === product.id);
+                      
+                        if (exists) {
+                          setSelectedProducts(selectedProducts.filter((p) => p.id !== product.id));
+                        } else {
+                          setSelectedProducts([
+                            ...selectedProducts,
+                            { ...product, quantity: 1, checked: true },
+                          ]);
+                        }
+                      };
+                      
+                      
 
-                          if (isSelected) {
-
-                            setSelectedProducts(
-                              selectedProducts.filter((p) => p.id !== product.id)
-                            );
-
-                          } else {
-
-                            setSelectedProducts([
-                              ...selectedProducts,
-                              { 
-                                ...product,
-                                quantity: 1,
-                              }
-                            ]);
-
-                          }
-                        };
-
-
+                      {/* Calculos producto */}
                       const margenEuros = product.price - product.coste;
                       const margenPorc = product.coste > 0 ? (margenEuros / product.coste) * 100 : 0;
                       const precioPVPIVA = product.price * (1 + (product.iva / 100));
-                  
+                      const isChecked = selectedProducts.find((p) => p.id === product.id)?.checked || false;
 
                       return (
-                        <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${ selectedProducts.includes(product.id) ? "bg-blue-50" : "" }`}>
-
+                        <tr
+                          key={product.id}
+                          className={`hover:bg-gray-50 ${
+                            selectedProducts.find((p) => p.id === product.id && p.checked)
+                              ? "bg-blue-50"
+                              : ""
+                          }`}
+                        >
                           <td className="px-4 py-3 text-center">
                             <input
                               type="checkbox"
                               value={product.id}
-                              checked={selectedProducts.includes(product.id)}
-                              onChange={handleCheckboxChangeProducts}
+                              checked={isChecked}
+                              onChange={() => handleCheckboxChangeProducts(product)}
                             />
                           </td>
 
@@ -1112,7 +1024,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("vintages") ? "hidden" : ""}`}>
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("vintage") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <select
                                 name="vintage_id"
@@ -1196,7 +1108,7 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                                  {/* NUEVAS COLUMNAS CALCULADAS */}
+                          {/* NUEVAS COLUMNAS CALCULADAS */}
                           <td className="px-10 py-3 text-sm text-gray-900 whitespace-nowrap">
                             {margenEuros.toFixed(2)} €
                           </td>
@@ -1225,191 +1137,189 @@ const getOptionName = (category, id) => {
         </div>
       </div>
 
-      <div className="min-h-screen  p-6">
-      <div className="max-w-7xl mx-auto">
+      {isCreatingProposal && (
+  <div className="min-h-screen mt-10 w-2/4">
+    <div className="max-w-7xl mx-auto">
 
-        <div id='proposal-title' className='flex items-center mb-8 gap-2'>
-          <FileText></FileText>
-          <h1 className="text-3xl text-gray-800">Sistema de Propuestas</h1>
-        </div>
-
-        <div className="gap-6">
-        <div className="lg:col-span-1 space-y-6 mb-8">
-      <div className="bg-white rounded-lg border p-6">
-        <h2 className="font-semibold mb-4 flex items-center gap-2">
-          <User className="w-5 h-5" />
-          Seleccionar Cliente
-        </h2>
-
-        {/* Buscador */}
-        <input
-          type="text"
-          placeholder="Buscar cliente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
-        />
-
-        {/* Lista de clientes filtrados */}
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {filteredClients.length > 0 ? (
-            filteredClients.map(client => (
-              <button
-                key={client.id}
-                onClick={() => setSelectedClient(client)}
-                className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                  selectedClient?.id === client.id
-                    ? 'border-orange-300 bg-orange-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <p className="font-medium">{client.name}</p>
-                <p className="text-sm text-gray-600">{client.company}</p>
-              </button>
-            ))
-          ) : (
-            <p className="text-gray-400 text-sm">No se encontraron clientes</p>
-          )}
-        </div>
+      <div id='proposal-title' className='flex items-center mb-8 gap-2'>
+        <FileText />
+        <h1 className="text-lg md:text-2xl text-gray-800">Sistema de Propuestas</h1>
       </div>
-    </div>
-          {/* Panel derecho: Vista previa de la propuesta */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border p-8">
-              {/* Detalles del cliente */}
-              <div className="mb-8">
-                <div className="flex justify-between items-start mb-6">
-                  <div >
 
-                    <div className='w-full flex justify-between items-center mb-4'>
-                      <h2 className="text-2xl text-gray-800">Detalles de la Propuesta</h2>
+      <div className="gap-6">
+        <div className="lg:col-span-1 space-y-6 mb-8">
+          <div className="bg-white rounded-lg p-4">
+            <h2 className="font-semibold mb-4 flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Seleccionar Cliente
+            </h2>
 
-                      {selectedClient && (
-                        <button
-                          onClick={() => setShowHistory(!showHistory)}
-                          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                          <History className="w-4 h-4" />
-                          Historial ({getClientProposals().length})
-                        </button>
-                      )}
-                    </div>
+            {/* Buscador */}
+            <input
+              type="text"
+              placeholder="Buscar cliente..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+            />
 
-                    <div id='proposal-state' className='bg-yellow-100 inline-block py-1 px-2 rounded-lg mb-4'>
-                      pending
-                    </div>
+            {/* Lista de clientes filtrados */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredClients.length > 0 ? (
+                filteredClients.map(client => (
+                  <button
+                    key={client.id}
+                    onClick={() => setSelectedClient(client)}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                      selectedClient?.id === client.id
+                        ? 'border-orange-300 bg-orange-50'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <p className="font-medium">{client.name}</p>
+                    <p className="text-sm text-gray-600">{client.company}</p>
+                  </button>
+                ))
+              ) : (
+                <p className="text-gray-400 text-sm">No se encontraron clientes</p>
+              )}
+            </div>
+          </div>
+        </div>
 
-                    {selectedClient ? (
-                      <div className="w-full bg-orange-50 p-4 rounded-lg border-l-4 border-orange-300">
-                        <p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
-                        <p className="text-gray-600">{selectedClient.company}</p>
-                        <p className="text-sm text-gray-600 mt-2">{selectedClient.email}</p>
-                        <p className="text-sm text-gray-600">{selectedClient.phone}</p>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
-                        <p className="text-gray-500">Selecciona un cliente para comenzar</p>
-                      </div>
+        {/* Panel derecho: Vista previa de la propuesta */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-lg p-6">
+            {/* Detalles del cliente */}
+            <div className="mb-8">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+
+                  <div className='w-full flex justify-between items-center mb-4'>
+                    <h2 className="text-lg text-gray-800">Detalles de la Propuesta</h2>
+
+                    {selectedClient && (
+                      <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        <History className="w-4 h-4" />
+                        Historial ({getClientProposals().length})
+                      </button>
                     )}
                   </div>
-                  
 
+                  {selectedClient ? (
+                    <div className="w-full bg-orange-50 p-4 rounded-lg border-l-4 border-orange-300">
+                      <p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
+                      <p className="text-gray-600">{selectedClient.company}</p>
+                      <p className="text-sm text-gray-600 mt-2">{selectedClient.email}</p>
+                      <p className="text-sm text-gray-600">{selectedClient.phone}</p>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
+                      <p className="text-gray-500">Selecciona un cliente para comenzar</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Historial de propuestas */}
-                {showHistory && selectedClient && (
-                  <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-3">Historial de Propuestas</h3>
-                    {getClientProposals().length === 0 ? (
-                      <p className="text-gray-500 text-sm">No hay propuestas anteriores</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {getClientProposals().map(proposal => (
-                          <div key={proposal.id} className="bg-white p-3 rounded border">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-medium text-sm">Propuesta #{proposal.id}</p>
-                                <p className="text-xs text-gray-600">{proposal.date}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold mb-2">${proposal.total}</p>
-                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                                  {proposal.status}
-                                </span>
-                              </div>
+              </div>
+
+              {/* Historial de propuestas */}
+              {showHistory && selectedClient && (
+                <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3">Historial de Propuestas</h3>
+                  {getClientProposals().length === 0 ? (
+                    <p className="text-gray-500 text-sm">No hay propuestas anteriores</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getClientProposals().map(proposal => (
+                        <div key={proposal.id} className="bg-white p-3 rounded border">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">Propuesta #{proposal.id}</p>
+                              <p className="text-xs text-gray-600">{proposal.date}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold mb-2">${proposal.total}</p>
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                {proposal.status}
+                              </span>
                             </div>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Productos seleccionados */}
+            <div>
+              <h2 className="text-lg mb-4 flex items-center gap-2">
+                <Package className='w-5'/>
+                Productos Seleccionados
+              </h2>
+
+              {selectedProducts.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">No hay productos seleccionados</p>
+                  <p className="text-sm text-gray-400 mt-2">Añade productos desde el catálogo</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto mb-6">
+                    <table className="bg-white border rounded-lg overflow-hidden">
+                      <CustomTableHeader labels={["Código", "Producto", "Precio", "Cantidad", "Subtotal", "Acción"]} />
+                      <tbody>
+                        {selectedProducts.map((product) => (
+                          <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-4 text-sm">{product.code}</td>
+                            <td className="py-3 px-4 whitespace-nowrap">{product.name}</td>
+                            <td className="py-3 px-4 font-medium">${product.price}</td>
+                            <td className="py-3 px-4">
+                              <input
+                                type="number"
+                                min="1"
+                                value={1}
+                                className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="py-3 px-4 font-semibold ">
+                              ${product.price}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={() => removeProduct(product.id)}
+                                className="text-red-500 hover:text-red-700 font-medium transition-colors"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                    )}
+                      </tbody>
+                    </table>
                   </div>
-                )}
-              </div>
 
-              {/* Productos seleccionados */}
-              <div>
-                <h2 className="text-2xl mb-4 flex items-center gap-2">
-                  <Package />
-                  Productos Seleccionados
-                </h2>
-                
-                {selectedProducts.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500">No hay productos seleccionados</p>
-                    <p className="text-sm text-gray-400 mt-2">Añade productos desde el catálogo</p>
+                  <div className="border-t pt-6 flex justify-end">
+                    <button
+                      onClick={create_proposal}
+                      className="w-2/4 bg-main-color hover:bg-orange-400 text-white py-2 rounded-lg transition-all "
+                    >
+                      Guardar Propuesta
+                    </button>
                   </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto mb-6">
-                      <table className="bg-white border rounded-lg overflow-hidden">
-                        <CustomTableHeader labels={["Código", "Producto", "Precio", "Cantidad", "Subtotal", "Acción"]} />
-                        <tbody>
-                          {selectedProducts.map((product) => (
-                            <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-4 text-sm">{product.code}</td>
-                              <td className="py-3 px-4 whitespace-nowrap">{product.name}</td>
-                              <td className="py-3 px-4 font-medium">${product.price}</td>
-                              <td className="py-3 px-4">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={1}
-                                  className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="py-3 px-4 font-semibold ">
-                                ${product.price}
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <button
-                                  onClick={() => removeProduct(product.id)}
-                                  className="text-red-500 hover:text-red-700 font-medium transition-colors"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="border-t pt-6 flex justify-end">                      
-                      <button
-                        onClick={create_proposal}
-                        className="w-2/4 bg-main-color hover:bg-orange-400 text-white py-2 rounded-lg transition-all "
-                      >
-                        Guardar Propuesta
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
+)}
 
     </div>
   );

@@ -31,7 +31,7 @@ export const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters
 
   return (
     <th className={`px-10 pt-2 align-top ${isHidden(item) ? "hidden" : ""}`}>
-      <div className='flex flex-col justify-start'>
+      <div className='flex flex-col justify-start text-sm'>
         {label}
         {hasInput && (
           <input
