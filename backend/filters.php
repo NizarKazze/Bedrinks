@@ -63,7 +63,12 @@ switch ($action) {
         break;
     case 'update_product':
         echo json_encode(update_product());
-        break;      
+        break;
+
+    case 'grape':
+        $product_id = $_POST['product_id'] ?? $_GET['product_id'] ?? '';
+        echo json_encode(get_grape($product_id));
+        break;    
     default:
         echo json_encode(['error' => 'Invalid action']);
 }

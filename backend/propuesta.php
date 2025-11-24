@@ -38,7 +38,7 @@ function create_proposal($client_id, $products = []) {
     }
 }
 
-// ✅ Get client proposals history
+// Get client proposals history
 function get_history_by_client($client_id) {
     $pdo = Conectiondb();
     try {
@@ -56,7 +56,7 @@ function get_history_by_client($client_id) {
     }
 }
 
-// ✅ Get full proposal details
+// Get full proposal details
 function get_proposal_details($proposal_id) {
     $pdo = Conectiondb();
     try {
@@ -75,7 +75,34 @@ function get_proposal_details($proposal_id) {
     }
 }
 
-// ✅ Update proposal status
+// Update proposal
+
+/*function update_proposal($proposal_id, $products) {
+    $pdo = Conectiondb();
+
+    try {
+        $pdo -> beginTransaction();
+
+        // get actual products
+        $stmt = $pdo->prepare("SELECT product_id FROM proposal_products WHERE proposal_id = ?");
+        $stmt -> execute([$proposal_id]);
+        $currentProducts = $stmt->fetchAll(PDO:FETCH_COLUMN);
+
+        // Create Array with new product Id's
+        $incomingIds = array_column($products, "product_id");
+        
+        $toDelete = array_diff($currentProducts, $incomingIds);
+        if (!empty($toDelete)) {
+            $in  = str_repeat('?,', count($toDelete) - 1) . '?';
+            $sql = "DELETE FROM proposal_products WHERE proposal_id = ? AND product_id IN ($in)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_merge([$proposal_id], array_values($toDelete)));
+        }
+        
+    }
+}*/
+
+// Update proposal status
 function update_proposal_status($proposal_id, $status) {
     $pdo = Conectiondb();
     try {
@@ -87,9 +114,8 @@ function update_proposal_status($proposal_id, $status) {
     }
 }
 
-// 🧩 ---------- CLIENTS CRUD ----------
 
-// ✅ Add new client
+// Add new client
 function add_client($data) {
     $pdo = Conectiondb();
     try {
@@ -106,7 +132,7 @@ function add_client($data) {
     }
 }
 
-// ✅ Update client
+// Update client
 function update_client($id, $data) {
     $pdo = Conectiondb();
     try {
@@ -160,7 +186,7 @@ switch ($action) {
         break;
 
     case 'get-history-by-client':
-        echo json_encode(get_history_by_client($_GET['client_id']));
+        echo json_encode(array_values(get_history_by_client($_GET['client_id'])));
         break;
 
     case 'get-proposal-details':

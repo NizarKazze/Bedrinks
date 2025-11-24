@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, BottleWine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package} from 'lucide-react';
+import { Search, BottleWine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package, TriangleAlert, Star} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
@@ -44,6 +44,14 @@ export default function ProductFilter() {
     suppliers: []
   });
 
+  const [expandedFilters, setExpandedFilters] = useState({
+    category_id: true,
+    denomination_id: false,
+    winery_id: false,
+    vintage_id: false,
+    supplier_id: false
+  });
+
   const [clients, setClients] = useState([]);
 
   // View controller
@@ -70,6 +78,7 @@ export default function ProductFilter() {
     margen_porcentaje: true,
     iva: true,
     tarifa: true,
+    status: true,
 
   });
 
@@ -98,16 +107,29 @@ export default function ProductFilter() {
   const { data: clientData, error } = useFetch(
     "backend/propuesta.php?action=get-all-clients"
   );
+
+  const clientId = selectedClient?.id ?? null;
+  const { data: HistoryData } = useFetch(
+    `backend/propuesta.php?action=get-history-by-client&client_id=${clientId}`
+  );
   
   /**
    * Actualizar estados al recibir los datos del backend
    */
 
   useEffect(() => {
+    if (HistoryData) {
+      setHistoryClient(HistoryData);
+    }
+  }, [HistoryData, selectedClient]);
+
+  useEffect(() => {
     if (clientData) {
       setClients(clientData);
     }
   }, [clientData]);
+
+  console.log(clientData)
 
   useEffect(() => {
     if (denominationData && denominationData.length > 0) {
@@ -195,17 +217,11 @@ export default function ProductFilter() {
         price: product.price
       }))
     });
-
+    setSelectedProducts([])
     console.log(response);
   };
 
-  const getClientProposals = () => {
-    if (!selectedClient) return [];
-    return proposals.filter(p => p.clientId === selectedClient.id);
-  };
-
-
-
+  
   const removeProduct = (id) => {
     setSelectedProducts(selectedProducts.filter((item) => item.id !== id));
   };
@@ -219,7 +235,7 @@ export default function ProductFilter() {
   };
 
 
-  // Edición inline
+  // Edición inline producto
 
   const startEdit = (product) => {
     setEditingId(product.id);
@@ -239,30 +255,34 @@ export default function ProductFilter() {
     });
   };
 
-const saveEdit = async () => {
-  try {
-    const res = await fetch("/backend/filters.php?action=update_product", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editData),
-    });
+  const saveEdit = async () => {
+    try {
+      const res = await fetch("/backend/filters.php?action=update_product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      });
 
-    // Si el backend responde con éxito HTTP
-    if (!res.ok) throw new Error("Error al actualizar el producto");
+      // Si el backend responde con éxito HTTP
+      if (!res.ok) throw new Error("Error al actualizar el producto");
 
-    // Actualizamos el estado de productos directamente
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product.id === editData.id ? { ...product, ...editData } : product
-      )
-    );
+      // Actualizamos el estado de productos directamente
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.id === editData.id ? { ...product, ...editData } : product
+        )
+      );
 
-    setEditingId(null);
-    setEditData({});
-  } catch (error) {
-    console.error("Error al actualizar el producto:", error);
-  }
-};
+      setEditingId(null);
+      setEditData({});
+    } catch (error) {
+      console.error("Error al actualizar el producto:", error);
+    }
+  };
+
+  // =========== Product Controler ===========
+
+
 
 
 
@@ -337,16 +357,6 @@ const saveEdit = async () => {
     );
   };
 
-  const [expandedFilters, setExpandedFilters] = useState({
-    category_id: true,
-    denomination_id: false,
-    winery_id: false,
-    vintage_id: false,
-    supplier_id: false
-  });
-
-
-
   const applyCategoryFilter = (parentID) => {
     if (!categoryData) return;
 
@@ -357,13 +367,6 @@ const saveEdit = async () => {
       category_id: allCategoryIds
     }));
   };
-
-
-
-
-
-
-
 
   const clearFilters = () => {
     setFilters({
@@ -644,7 +647,14 @@ const getOptionName = (category, id) => {
     </div>
   );
 
-
+  const renderStars = (rating) => {
+    const normalized = Math.min(Math.max(parseInt(rating) || 0, 1), 3); 
+    return [...Array(normalized)].map((_, i) => (
+      <Star key={i} className="w-4 h-4 text-yellow-500 inline-block" fill="currentColor" />
+    ));
+  };
+  
+  
 
   return (
     <div className="min-h-screen flex">
@@ -850,6 +860,7 @@ const getOptionName = (category, id) => {
                       <th className="text-sm">Acciones</th>
 
                       {[
+                        { item: "status", label: "Estado", hasInput: false },
                         { item: "code", label: "Código", hasInput: true },
                         { item: "name", label: "Nombre", hasInput: true },
                         { item: "winery", label: "Bodega", hasInput: true },
@@ -930,8 +941,8 @@ const getOptionName = (category, id) => {
                           <td className="px-10 py-3">
                             {isEditing ? (
                               <div id='Btn-actions' className='flex gap-2'>
-                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save /></button>
-                                <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff /></button>
+                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save className='w-5'/></button>
+                                <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff className='w-5'/></button>
                               </div>
 
                             ) : (
@@ -942,6 +953,20 @@ const getOptionName = (category, id) => {
                           </td>
 
                           {/* Campos directos */}
+
+                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap capitalize  ${isHidden("status") ? "hidden" : ""}`}>
+                            {isEditing ? (
+                              <input
+                                name="code"
+                                value={editData.estado}
+                                onChange={handleChange}
+                              />
+                            ) : (
+                              <div className='bg-green-100 text-center p-2 rounded-lg'>{product.estado}</div>
+                              
+                            )}
+                          </td>
+
                           <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("code") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
@@ -1070,18 +1095,28 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("rating") ? "hidden" : ""}`}>
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                name="rating"
-                                value={editData.rating || ""}
-                                onChange={handleChange}
-                              />
-                            ) : (
-                              product.rating
-                            )}
-                          </td>
+                          <td
+  className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${
+    isHidden("rating") ? "hidden" : ""
+  }`}
+>
+  {isEditing ? (
+    <input
+      type="number"
+      name="rating"
+      min="1"
+      max="3"
+      value={editData.rating || ""}
+      onChange={handleChange}
+      className="w-16"
+    />
+  ) : (
+    <div className="flex gap-1">
+      {renderStars(product.rating)}
+    </div>
+  )}
+</td>
+
 
                           <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("price") ? "hidden" : ""}`}>
                             {isEditing ? (
@@ -1141,7 +1176,7 @@ const getOptionName = (category, id) => {
   <div className="min-h-screen mt-10 w-2/4">
     <div className="max-w-7xl mx-auto">
 
-      <div id='proposal-title' className='flex items-center mb-8 gap-2'>
+      <div id='proposal-title' className='flex items-center mb-8 gap-2 px-4'>
         <FileText />
         <h1 className="text-lg md:text-2xl text-gray-800">Sistema de Propuestas</h1>
       </div>
@@ -1160,29 +1195,35 @@ const getOptionName = (category, id) => {
               placeholder="Buscar cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300"
             />
 
             {/* Lista de clientes filtrados */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredClients.length > 0 ? (
-                filteredClients.map(client => (
-                  <button
-                    key={client.id}
-                    onClick={() => setSelectedClient(client)}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                      selectedClient?.id === client.id
-                        ? 'border-orange-300 bg-orange-50'
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <p className="font-medium">{client.name}</p>
-                    <p className="text-sm text-gray-600">{client.company}</p>
-                  </button>
-                ))
-              ) : (
-                <p className="text-gray-400 text-sm">No se encontraron clientes</p>
+
+              {/* Si el input está vacío, no mostramos nada */}
+              {search.trim() !== '' && (
+                <>
+                  {filteredClients.length > 0 ? (
+                    filteredClients.slice(0, 3).map(client => (
+                      <button
+                        key={client.id}
+                        onClick={() => setSelectedClient(client)}
+                        className={`w-full text-left p-2  border-b-2 transition-all ${
+                          selectedClient?.id === client.id
+                            ? 'border-orange-300 bg-orange-50'
+                            : 'border-gray-200'
+                        }`}
+                      >
+                        <p className="font-medium">{client.name}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">No se encontraron clientes</p>
+                  )}
+                </>
               )}
+
             </div>
           </div>
         </div>
@@ -1193,8 +1234,7 @@ const getOptionName = (category, id) => {
             {/* Detalles del cliente */}
             <div className="mb-8">
               <div className="flex justify-between items-start mb-6">
-                <div>
-
+                <div className='w-full'>
                   <div className='w-full flex justify-between items-center mb-4'>
                     <h2 className="text-lg text-gray-800">Detalles de la Propuesta</h2>
 
@@ -1204,20 +1244,33 @@ const getOptionName = (category, id) => {
                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                       >
                         <History className="w-4 h-4" />
-                        Historial ({getClientProposals().length})
+                        {historyClient.length > 0 && (
+                          <p>Historial ({historyClient.length})</p>
+                        )}
                       </button>
                     )}
+                    
                   </div>
 
                   {selectedClient ? (
-                    <div className="w-full bg-orange-50 p-4 rounded-lg border-l-4 border-orange-300">
-                      <p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
-                      <p className="text-gray-600">{selectedClient.company}</p>
-                      <p className="text-sm text-gray-600 mt-2">{selectedClient.email}</p>
-                      <p className="text-sm text-gray-600">{selectedClient.phone}</p>
+                    <div className="w-full bg-gray-50 p-4 rounded-lg  flex justify-between">
+                      <div>
+                        <div className='flex gap-1 items-center mb-1'>
+                          <User className='w-5'></User><p className="font-semibold text-lg text-gray-800">{selectedClient.name}</p>
+
+                        </div>
+                        <p className="text-sm text-gray-600">{selectedClient.created_at}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-gray-600 mt-2">{selectedClient.email}</p>
+                        <p className="text-gray-600">{selectedClient.phone}</p>
+                        <p className="text-gray-600">{selectedClient.address}</p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
+                    <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300 flex gap-1 items-center">
+                      <TriangleAlert strokeWidth={1} className='w-5' />
                       <p className="text-gray-500">Selecciona un cliente para comenzar</p>
                     </div>
                   )}
@@ -1229,16 +1282,16 @@ const getOptionName = (category, id) => {
               {showHistory && selectedClient && (
                 <div className="mt-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold mb-3">Historial de Propuestas</h3>
-                  {getClientProposals().length === 0 ? (
+                  {!historyClient || historyClient.length === 0 ? (
                     <p className="text-gray-500 text-sm">No hay propuestas anteriores</p>
                   ) : (
                     <div className="space-y-2">
-                      {getClientProposals().map(proposal => (
-                        <div key={proposal.id} className="bg-white p-3 rounded border">
+                      {historyClient.map(proposal => (
+                        <div key={proposal.proposal_id} className="bg-white p-3 rounded border">
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium text-sm">Propuesta #{proposal.id}</p>
-                              <p className="text-xs text-gray-600">{proposal.date}</p>
+                              <p className="font-medium text-sm">Propuesta #{proposal.proposal_id}</p>
+                              <p className="text-xs text-gray-600">{proposal.created_at}</p>
                             </div>
                             <div className="text-right">
                               <p className="font-semibold mb-2">${proposal.total}</p>
@@ -1251,44 +1304,30 @@ const getOptionName = (category, id) => {
                       ))}
                     </div>
                   )}
+
                 </div>
               )}
             </div>
 
             {/* Productos seleccionados */}
-            <div>
-              <h2 className="text-lg mb-4 flex items-center gap-2">
-                <Package className='w-5'/>
-                Productos Seleccionados
-              </h2>
-
+            <div id='selected-products-table' className=''>
               {selectedProducts.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <div className="text-center py-12 bg-gray-50 rounded-lg items-center flex flex-col">
+                  <Package className='w-32 h-24 text-gray-500 mb-2' strokeWidth={1}/>
                   <p className="text-gray-500">No hay productos seleccionados</p>
-                  <p className="text-sm text-gray-400 mt-2">Añade productos desde el catálogo</p>
+                  <p className="text-sm text-gray-400">Añade productos desde el catálogo</p>
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto mb-6">
-                    <table className="bg-white border rounded-lg overflow-hidden">
-                      <CustomTableHeader labels={["Código", "Producto", "Precio", "Cantidad", "Subtotal", "Acción"]} />
+                  <div className="overflow-x-auto mb-6 max-h-[50vh]">
+                    <table className="bg-white border rounded-lg overflow-hidden w-full">
+                      <CustomTableHeader labels={["Código", "Producto", "Precio"]} />
                       <tbody>
                         {selectedProducts.map((product) => (
                           <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-4 text-sm">{product.code}</td>
                             <td className="py-3 px-4 whitespace-nowrap">{product.name}</td>
                             <td className="py-3 px-4 font-medium">${product.price}</td>
-                            <td className="py-3 px-4">
-                              <input
-                                type="number"
-                                min="1"
-                                value={1}
-                                className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="py-3 px-4 font-semibold ">
-                              ${product.price}
-                            </td>
                             <td className="py-3 px-4 text-center">
                               <button
                                 onClick={() => removeProduct(product.id)}
@@ -1306,7 +1345,7 @@ const getOptionName = (category, id) => {
                   <div className="border-t pt-6 flex justify-end">
                     <button
                       onClick={create_proposal}
-                      className="w-2/4 bg-main-color hover:bg-orange-400 text-white py-2 rounded-lg transition-all "
+                      className="w-2/4 bg-gray-200 hover:scale-1 py-2 rounded-lg transition-all "
                     >
                       Guardar Propuesta
                     </button>

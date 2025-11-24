@@ -227,6 +227,21 @@ function get_vintages() {
     }
 }
 
+/**
+ * get uvas
+ */
+
+function get_grape($product_id){
+    $pdo = Conectiondb();
+
+    try {
+        $stmt = $pdo -> query("SELECT * FROM product_grape WHERE product_id = $product_id");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
 /*
  * Filtrar productos según uno o varios parámetros
  * Ejemplo: get_products(['type_id' => 2, 'denomination_id' => 5]);
