@@ -513,4 +513,25 @@ function get_clients() {
     }
 }
 
+function get_product_promotions($product_id) {
+    $pdo = Conectiondb();
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM promotion
+            WHERE product_id = ?
+            AND active = 1
+            AND (start_date IS NULL OR start_date <= CURDATE())
+            AND (end_date IS NULL OR end_date >= CURDATE())
+        ");
+        $stmt->execute([$product_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+
 ?>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, BottleWine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package, TriangleAlert, Star} from 'lucide-react';
+import { Search, BottleWine, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, Tag, ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, Calendar, FileText, Plus, History, Package, TriangleAlert, Star} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
@@ -24,7 +24,7 @@ export default function ProductFilter() {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [historyClient, setHistoryClient] = useState(null);
   
-
+  const [promoOpenId, setPromoOpenId] = useState(null);
 
   // Filtro 
 
@@ -112,6 +112,33 @@ export default function ProductFilter() {
   const { data: HistoryData } = useFetch(
     `backend/propuesta.php?action=get-history-by-client&client_id=${clientId}`
   );
+
+const [promotionsLoaded, setPromotionsLoaded] = useState(false);
+
+useEffect(() => {
+  async function addPromotionsToProducts() {
+    if (!products || products.length === 0 || promotionsLoaded) return;
+
+    const productsWithPromos = await Promise.all(
+      products.map(async (product) => {
+        const res = await fetch(`backend/filters.php?action=promotion&product_id=${product.id}`);
+        const promociones = await res.json();
+
+        return {
+          ...product,
+          promociones: promociones || []
+        };
+      })
+    );
+
+    setProducts(productsWithPromos);
+    setPromotionsLoaded(true);
+  }
+
+  addPromotionsToProducts();
+}, [products, promotionsLoaded]);
+
+console.log(products)
   
   /**
    * Actualizar estados al recibir los datos del backend
@@ -129,7 +156,6 @@ export default function ProductFilter() {
     }
   }, [clientData]);
 
-  console.log(clientData)
 
   useEffect(() => {
     if (denominationData && denominationData.length > 0) {
@@ -508,6 +534,20 @@ export default function ProductFilter() {
   useEffect(() => {
     applyFilters();
   }, [filters, orderBy]);
+
+  
+  const CategoryOptions = ({ categories, level = 0 }) => {
+    return categories.flatMap((category) => [
+      <option key={category.id} value={category.id}>
+        {'\u00A0'.repeat(level * 4)}{level > 0 ? '└─ ' : ''}{category.name}
+      </option>,
+      ...(category.children && category.children.length > 0 
+        ? CategoryOptions({ categories: category.children, level: level + 1 })
+        : [])
+    ]);
+  };
+
+
 
   const getFullCategoryPath = (categories, id) => {
     const findCategoryById = (list, targetId, path = []) => {
@@ -938,17 +978,48 @@ const getOptionName = (category, id) => {
                             />
                           </td>
 
-                          <td className="px-10 py-3">
+                          <td className="px-10 py-3 relative">
                             {isEditing ? (
                               <div id='Btn-actions' className='flex gap-2'>
-                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg"><Save className='w-5'/></button>
-                                <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg"><PencilOff className='w-5'/></button>
+                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg">
+                                  <Save className='w-5'/>
+                                </button>
+                                <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg">
+                                  <PencilOff className='w-5'/>
+                                </button>
                               </div>
-
                             ) : (
-                              <button onClick={() => startEdit(product)} className="bg-main-color-50 p-2 rounded-lg">
-                                <Pencil className='w-4 h-5'/>
-                              </button>
+                              <div className="flex gap-1 relative">
+                                <button 
+                                  onClick={() => startEdit(product)} 
+                                  className="bg-main-color-50 p-2 rounded-lg flex items-center gap-1"
+                                >
+                                  <Pencil className='w-4 h-5'/>
+                                </button>
+
+                                {/* Botón para mostrar promociones */}
+                                {product.promociones && product.promociones.length > 0 && (
+                                  <button 
+                                    onClick={() => setPromoOpenId(promoOpenId === product.id ? null : product.id)} 
+                                    className="bg-yellow-100 p-2 rounded-lg flex items-center gap-1"
+                                  >
+                                    <Tag className='w-5 h-5'/>
+                                  </button>
+                                )}
+
+                                {/* Desplegable con promociones */}
+                                {promoOpenId === product.id && (
+                                  <ul className="absolute top-0 left-full ml-2 bg-white border rounded shadow p-2 z-10 w-64">
+                                    {product.promociones.map(promo => (
+                                      <li key={promo.id} className="text-sm mb-1">
+                                        {promo.type === 'discount_percentage' && `${promo.discount_percent}% de descuento`}
+                                        {promo.type === 'discount_fixed' && `- ${promo.discount_amount} €`}
+                                        {promo.type === 'buy_x_get_y' && `Compra ${promo.buy_quantity} y llévate ${promo.free_quantity} gratis`}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
                             )}
                           </td>
 
@@ -1011,24 +1082,21 @@ const getOptionName = (category, id) => {
                             )}
                           </td>
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("category") ? "hidden" : ""}`}>
-                            {isEditing ? (
-                              <select
-                                name="category_id"
-                                value={editData.category_id || ""}
-                                onChange={handleChange}
-                              >
-                                <option value="">Seleccionar</option>
-                                {filterOptions.types.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              getOptionName("types", product.category_id)
-                            )}
-                          </td>
+                        <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("category") ? "hidden" : ""}`}>
+                          {isEditing ? (
+                            <select
+                              name="category_id"
+                              value={editData.category_id || ""}
+                              onChange={handleChange}
+                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                              <option value="">Seleccionar categoría...</option>
+                              {categoryData && <CategoryOptions categories={categoryData} />}
+                            </select>
+                          ) : (
+                            getOptionName("types", product.category_id)
+                          )}
+                        </td>
 
                           <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("denomination") ? "hidden" : ""}`}>
                             {isEditing ? (
@@ -1096,26 +1164,26 @@ const getOptionName = (category, id) => {
                           </td>
 
                           <td
-  className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${
-    isHidden("rating") ? "hidden" : ""
-  }`}
->
-  {isEditing ? (
-    <input
-      type="number"
-      name="rating"
-      min="1"
-      max="3"
-      value={editData.rating || ""}
-      onChange={handleChange}
-      className="w-16"
-    />
-  ) : (
-    <div className="flex gap-1">
-      {renderStars(product.rating)}
-    </div>
-  )}
-</td>
+                            className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${
+                              isHidden("rating") ? "hidden" : ""
+                            }`}
+                          >
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                name="rating"
+                                min="1"
+                                max="3"
+                                value={editData.rating || ""}
+                                onChange={handleChange}
+                                className="w-16"
+                              />
+                            ) : (
+                              <div className="flex gap-1">
+                                {renderStars(product.rating)}
+                              </div>
+                            )}
+                          </td>
 
 
                           <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("price") ? "hidden" : ""}`}>

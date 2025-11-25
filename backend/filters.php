@@ -68,6 +68,11 @@ switch ($action) {
     case 'grape':
         $product_id = $_POST['product_id'] ?? $_GET['product_id'] ?? '';
         echo json_encode(get_grape($product_id));
+        break;
+    case 'promotion':
+        $product_id = (int) ($_POST['product_id'] ?? $_GET['product_id'] ?? 0);
+
+        echo json_encode(get_product_promotions($product_id));
         break;    
     default:
         echo json_encode(['error' => 'Invalid action']);

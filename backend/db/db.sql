@@ -331,3 +331,116 @@ INSERT INTO box (product_id, units, box_price) VALUES
 ALTER TABLE product
 ADD COLUMN coste DECIMAL(10,2) DEFAULT 0,
 ADD COLUMN estado VARCHAR(20) DEFAULT 'activo';
+
+CREATE TABLE promotion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    type ENUM('discount_percentage', 'discount_fixed', 'buy_x_get_y') NOT NULL,
+    -- valores para discount_percentage
+    discount_percent DECIMAL(5,2),
+    -- valores para discount_fixed
+    discount_amount DECIMAL(10,2),
+    -- valores para buy_x_get_y
+    buy_quantity INT,
+    free_quantity INT,
+    start_date DATE,
+    end_date DATE,
+    active TINYINT(1) DEFAULT 1,
+    CONSTRAINT fk_promo_product FOREIGN KEY (product_id) REFERENCES product(id)
+);
+
+INSERT INTO promotion 
+(product_id, type, discount_percent, discount_amount, buy_quantity, free_quantity, start_date, end_date, active)
+VALUES
+-- PRODUCTO 1
+(1, 'discount_percentage', 10.00, NULL, NULL, NULL, '2025-01-01', '2025-03-01', 1),
+
+-- PRODUCTO 2
+(2, 'discount_fixed', NULL, 2.50, NULL, NULL, '2025-02-01', '2025-04-15', 1),
+
+-- PRODUCTO 3
+(3, 'buy_x_get_y', NULL, NULL, 5, 1, NULL, NULL, 1),
+
+-- PRODUCTO 4
+(4, 'discount_percentage', 15.00, NULL, NULL, NULL, '2025-01-15', '2025-02-28', 1),
+
+-- PRODUCTO 5
+(5, 'discount_fixed', NULL, 1.00, NULL, NULL, NULL, NULL, 1),
+
+-- PRODUCTO 6
+(6, 'buy_x_get_y', NULL, NULL, 3, 1, '2025-03-01', '2025-06-01', 1),
+
+-- PRODUCTO 7
+(7, 'discount_percentage', 5.00, NULL, NULL, NULL, NULL, NULL, 1),
+
+-- PRODUCTO 8
+(8, 'discount_fixed', NULL, 4.00, NULL, NULL, '2025-02-10', '2025-03-20', 1),
+
+-- PRODUCTO 9
+(9, 'buy_x_get_y', NULL, NULL, 4, 1, NULL, NULL, 1),
+
+-- PRODUCTO 10
+(10, 'discount_percentage', 20.00, NULL, NULL, NULL, '2025-01-01', '2025-12-31', 1),
+
+-- PRODUCTO 11
+(11, 'discount_fixed', NULL, 3.00, NULL, NULL, NULL, NULL, 1),
+
+-- PRODUCTO 12
+(12, 'buy_x_get_y', NULL, NULL, 6, 2, '2025-02-01', '2025-05-01', 1),
+
+-- PRODUCTO 13
+(13, 'discount_percentage', 12.50, NULL, NULL, NULL, NULL, NULL, 1),
+
+-- PRODUCTO 14
+(14, 'discount_fixed', NULL, 5.00, NULL, NULL, '2025-03-01', '2025-03-31', 1),
+
+-- PRODUCTO 15
+(15, 'buy_x_get_y', NULL, NULL, 2, 1, NULL, NULL, 1);
+
+INSERT INTO promotion 
+(product_id, type, discount_percent, discount_amount, buy_quantity, free_quantity, start_date, end_date, active)
+VALUES
+-- PRODUCTO 1
+(1, 'discount_percentage', 10.00, NULL, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 2
+(2, 'discount_fixed', NULL, 2.50, NULL, NULL, '2025-02-01', '2026-12-31', 1),
+
+-- PRODUCTO 3
+(3, 'buy_x_get_y', NULL, NULL, 5, 1, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 4
+(4, 'discount_percentage', 15.00, NULL, NULL, NULL, '2025-01-15', '2026-12-31', 1),
+
+-- PRODUCTO 5
+(5, 'discount_fixed', NULL, 1.00, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 6
+(6, 'buy_x_get_y', NULL, NULL, 3, 1, '2025-03-01', '2026-12-31', 1),
+
+-- PRODUCTO 7
+(7, 'discount_percentage', 5.00, NULL, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 8
+(8, 'discount_fixed', NULL, 4.00, NULL, NULL, '2025-02-10', '2026-12-31', 1),
+
+-- PRODUCTO 9
+(9, 'buy_x_get_y', NULL, NULL, 4, 1, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 10
+(10, 'discount_percentage', 20.00, NULL, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 11
+(11, 'discount_fixed', NULL, 3.00, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 12
+(12, 'buy_x_get_y', NULL, NULL, 6, 2, '2025-02-01', '2026-12-31', 1),
+
+-- PRODUCTO 13
+(13, 'discount_percentage', 12.50, NULL, NULL, NULL, '2025-01-01', '2026-12-31', 1),
+
+-- PRODUCTO 14
+(14, 'discount_fixed', NULL, 5.00, NULL, NULL, '2025-03-01', '2026-12-31', 1),
+
+-- PRODUCTO 15
+(15, 'buy_x_get_y', NULL, NULL, 2, 1, '2025-01-01', '2026-12-31', 1);
