@@ -5,7 +5,7 @@ import { usePost } from '../Hook/usePost';
 import Logo from '../assets/BeDrinks-logo.png'
 
 import { LoadingComponent } from '../Components/UI/UIHelpers';
-import { ProductTableHeader } from '../Components/UI/ProductTableUI';
+import { ProductTableHeader, ShowPromotions } from '../Components/UI/ProductTableUI';
 import { ProductsNotFound } from '../Components/UI/UIHelpers';
 
 import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
@@ -79,6 +79,7 @@ export default function ProductFilter() {
     iva: true,
     tarifa: true,
     status: true,
+    grape: true
 
   });
 
@@ -112,33 +113,6 @@ export default function ProductFilter() {
   const { data: HistoryData } = useFetch(
     `backend/propuesta.php?action=get-history-by-client&client_id=${clientId}`
   );
-
-const [promotionsLoaded, setPromotionsLoaded] = useState(false);
-
-useEffect(() => {
-  async function addPromotionsToProducts() {
-    if (!products || products.length === 0 || promotionsLoaded) return;
-
-    const productsWithPromos = await Promise.all(
-      products.map(async (product) => {
-        const res = await fetch(`backend/filters.php?action=promotion&product_id=${product.id}`);
-        const promociones = await res.json();
-
-        return {
-          ...product,
-          promociones: promociones || []
-        };
-      })
-    );
-
-    setProducts(productsWithPromos);
-    setPromotionsLoaded(true);
-  }
-
-  addPromotionsToProducts();
-}, [products, promotionsLoaded]);
-
-console.log(products)
   
   /**
    * Actualizar estados al recibir los datos del backend
@@ -261,7 +235,7 @@ console.log(products)
   };
 
 
-  // Edición inline producto
+  // ================ Edición inline producto
 
   const startEdit = (product) => {
     setEditingId(product.id);
@@ -306,14 +280,15 @@ console.log(products)
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveEdit();
+    }
+  };
+  
+
   // =========== Product Controler ===========
-
-
-
-
-
-
-
 
   const [Columns, setColumns] = useState({
     code: 'code',
@@ -539,7 +514,7 @@ console.log(products)
   const CategoryOptions = ({ categories, level = 0 }) => {
     return categories.flatMap((category) => [
       <option key={category.id} value={category.id}>
-        {'\u00A0'.repeat(level * 4)}{level > 0 ? '└─ ' : ''}{category.name}
+        {'\u00A0'.repeat(level * 3)}{level > 0 ? '— ' : '━ '}{category.name}
       </option>,
       ...(category.children && category.children.length > 0 
         ? CategoryOptions({ categories: category.children, level: level + 1 })
@@ -908,7 +883,7 @@ const getOptionName = (category, id) => {
                         { item: "denomination", label: "D.O.", hasInput: true },
                         { item: "vintage", label: "Añada", hasInput: true },
                         { item: "format", label: "Formato", hasInput: true },
-                        { item: "blend", label: "Blend", hasInput: true },
+                        { item: "grape", label: "UVA", hasInput: true },
                         { item: "rating", label: "Rating", hasInput: true },
                         { item: "price", label: "Precio", hasInput: true },
                         { item: "coste", label: "Coste", hasInput: true },
@@ -937,6 +912,7 @@ const getOptionName = (category, id) => {
                   <tbody className="bg-white divide-y divide-gray-200">
 
                     {products.map((product) => {
+
                       const isEditing = editingId === product.id;
 
                       const handleCheckboxChangeProducts = (product) => {
@@ -952,8 +928,6 @@ const getOptionName = (category, id) => {
                         }
                       };
                       
-                      
-
                       {/* Calculos producto */}
                       const margenEuros = product.price - product.coste;
                       const margenPorc = product.coste > 0 ? (margenEuros / product.coste) * 100 : 0;
@@ -980,16 +954,20 @@ const getOptionName = (category, id) => {
 
                           <td className="px-10 py-3 relative">
                             {isEditing ? (
+
                               <div id='Btn-actions' className='flex gap-2'>
-                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg">
+                                <button onClick={saveEdit} className="bg-green-200 p-1 rounded-lg" onKeyDown={handleKeyDown}>
                                   <Save className='w-5'/>
                                 </button>
                                 <button onClick={cancelEdit} className="bg-red-200 p-1 rounded-lg">
                                   <PencilOff className='w-5'/>
                                 </button>
                               </div>
+
                             ) : (
                               <div className="flex gap-1 relative">
+
+                                {/* Btn iniciar edición*/}
                                 <button 
                                   onClick={() => startEdit(product)} 
                                   className="bg-main-color-50 p-2 rounded-lg flex items-center gap-1"
@@ -997,40 +975,37 @@ const getOptionName = (category, id) => {
                                   <Pencil className='w-4 h-5'/>
                                 </button>
 
-                                {/* Botón para mostrar promociones */}
-                                {product.promociones && product.promociones.length > 0 && (
-                                  <button 
-                                    onClick={() => setPromoOpenId(promoOpenId === product.id ? null : product.id)} 
-                                    className="bg-yellow-100 p-2 rounded-lg flex items-center gap-1"
-                                  >
-                                    <Tag className='w-5 h-5'/>
-                                  </button>
+                                {/* Btn mostrar promociones */}
+                                {product.promotions && product.promotions.length > 0 && (
+                                  <div>
+                                    <button 
+                                      onClick={() => setPromoOpenId(promoOpenId === product.id ? null : product.id)} 
+                                      className="p-2 rounded-lg flex items-center gap-1"
+                                    >
+                                      <Tag className='w-6 h-6'/>
+                                    </button>
+                                    <div className='absolute top-0 right-0 bg-red-400 rounded-full px-1 text-white'>{product.promotions.length}</div>
+                                  </div>
                                 )}
 
-                                {/* Desplegable con promociones */}
+                                {/* Desplegable con tabla de promociones */}
                                 {promoOpenId === product.id && (
-                                  <ul className="absolute top-0 left-full ml-2 bg-white border rounded shadow p-2 z-10 w-64">
-                                    {product.promociones.map(promo => (
-                                      <li key={promo.id} className="text-sm mb-1">
-                                        {promo.type === 'discount_percentage' && `${promo.discount_percent}% de descuento`}
-                                        {promo.type === 'discount_fixed' && `- ${promo.discount_amount} €`}
-                                        {promo.type === 'buy_x_get_y' && `Compra ${promo.buy_quantity} y llévate ${promo.free_quantity} gratis`}
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  <ShowPromotions product={product}></ShowPromotions>
                                 )}
                               </div>
                             )}
                           </td>
+
 
                           {/* Campos directos */}
 
                           <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap capitalize  ${isHidden("status") ? "hidden" : ""}`}>
                             {isEditing ? (
                               <input
-                                name="code"
+                                name="estado"
                                 value={editData.estado}
                                 onChange={handleChange}
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               <div className='bg-green-100 text-center p-2 rounded-lg'>{product.estado}</div>
@@ -1044,6 +1019,7 @@ const getOptionName = (category, id) => {
                                 name="code"
                                 value={editData.code}
                                 onChange={handleChange}
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               product.code
@@ -1056,6 +1032,7 @@ const getOptionName = (category, id) => {
                                 name="name"
                                 value={editData.name}
                                 onChange={handleChange}
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               product.name
@@ -1068,7 +1045,16 @@ const getOptionName = (category, id) => {
                               <select
                                 name="winery_id"
                                 value={editData.winery_id || ""}
+                                className='block w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md shadow-sm text-sm'
                                 onChange={handleChange}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault(); // evita que cierre o haga scroll
+                                    saveEdit();
+                                  } else if (e.key === "Escape") {
+                                    cancelEdit();
+                                  }
+                                }}
                               >
                                 <option value="">Seleccionar</option>
                                 {filterOptions.wineries.map((w) => (
@@ -1088,7 +1074,15 @@ const getOptionName = (category, id) => {
                               name="category_id"
                               value={editData.category_id || ""}
                               onChange={handleChange}
-                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                              className="block w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md shadow-sm text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+
+                                  saveEdit();
+                                } else if (e.key === "Escape") {
+                                  cancelEdit();
+                                }
+                              }}
                             >
                               <option value="">Seleccionar categoría...</option>
                               {categoryData && <CategoryOptions categories={categoryData} />}
@@ -1104,6 +1098,15 @@ const getOptionName = (category, id) => {
                                 name="denomination_id"
                                 value={editData.denomination_id || ""}
                                 onChange={handleChange}
+                                className='block w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md shadow-sm text-sm'
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault(); // evita que cierre o haga scroll
+                                    saveEdit();
+                                  } else if (e.key === "Escape") {
+                                    cancelEdit();
+                                  }
+                                }}
                               >
                                 <option value="">Seleccionar</option>
                                 {filterOptions.denominations.map((d) => (
@@ -1123,6 +1126,14 @@ const getOptionName = (category, id) => {
                                 name="vintage_id"
                                 value={editData.vintage_id || ""}
                                 onChange={handleChange}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault(); // evita que cierre o haga scroll
+                                    saveEdit();
+                                  } else if (e.key === "Escape") {
+                                    cancelEdit();
+                                  }
+                                }}
                               >
                                 <option value="">Seleccionar</option>
                                 {filterOptions.vintages.map((v) => (
@@ -1151,15 +1162,33 @@ const getOptionName = (category, id) => {
 
 
 
-                          <td className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${isHidden("blend") ? "hidden" : ""}`}>
+                          <td
+                            className={`px-10 py-3 text-sm text-gray-900 whitespace-nowrap ${
+                              isHidden("grape") ? "hidden" : ""
+                            }`}
+                          >
                             {isEditing ? (
                               <input
-                                name="blend"
-                                value={editData.blend || ""}
+                                name="grape"
+                                value={
+                                  Array.isArray(editData.grape)
+                                    ? editData.grape.map(g => g.name).join(", ")
+                                    : ""
+                                }
                                 onChange={handleChange}
                               />
                             ) : (
-                              product.blend
+                              <div className="flex flex-wrap gap-2 whitespace-nowrap">
+                                {Array.isArray(product.grape) &&
+                                  product.grape.map(g => (
+                                    <span
+                                      key={g.id}
+                                      className="px-2 py-1 bg-gray-200 text-gray-800 rounded-full text-xs"
+                                    >
+                                      {g.name}
+                                    </span>
+                                  ))}
+                              </div>
                             )}
                           </td>
 
@@ -1177,6 +1206,7 @@ const getOptionName = (category, id) => {
                                 value={editData.rating || ""}
                                 onChange={handleChange}
                                 className="w-16"
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               <div className="flex gap-1">
@@ -1193,6 +1223,7 @@ const getOptionName = (category, id) => {
                                 name="price"
                                 value={editData.price || ""}
                                 onChange={handleChange}
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               product.price
@@ -1205,6 +1236,7 @@ const getOptionName = (category, id) => {
                                 name="coste"
                                 value={editData.coste || ""}
                                 onChange={handleChange}
+                                onKeyDown={handleKeyDown}
                               />
                             ) : (
                               product.coste
@@ -1241,10 +1273,10 @@ const getOptionName = (category, id) => {
       </div>
 
       {isCreatingProposal && (
-  <div className="min-h-screen mt-10 w-2/4">
-    <div className="max-w-7xl mx-auto">
+  <div className="min-h-screen mt-6 w-2/4">
+    <div className="max-w-7xl mx-auto rounded-lg border mr-6">
 
-      <div id='proposal-title' className='flex items-center mb-8 gap-2 px-4'>
+      <div id='proposal-title' className='flex items-center my-6 gap-2 px-4'>
         <FileText />
         <h1 className="text-lg md:text-2xl text-gray-800">Sistema de Propuestas</h1>
       </div>

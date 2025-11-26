@@ -231,16 +231,24 @@ function get_vintages() {
  * get uvas
  */
 
-function get_grape($product_id){
+ function get_grape($product_id){
     $pdo = Conectiondb();
 
     try {
-        $stmt = $pdo -> query("SELECT * FROM product_grape WHERE product_id = $product_id");
+        $stmt = $pdo->prepare("
+            SELECT g.id, g.name
+            FROM product_grape pg
+            INNER JOIN grape g ON pg.grape_id = g.id
+            WHERE pg.product_id = :product_id
+        ");
+
+        $stmt->execute(['product_id' => $product_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         return [];
     }
 }
+
 
 /*
  * Filtrar productos según uno o varios parámetros
@@ -249,14 +257,14 @@ function get_grape($product_id){
  */
 
 
-function get_products($filters = [], $order = []) {
+ function get_products($filters = [], $order = []) {
     $pdo = Conectiondb();
 
     $query = "SELECT p.* FROM product p";
     $conditions = [];
     $params = [];
 
-    // --- Join si filtramos por proveedor ---
+    // ========= FILTROS =========
     if (isset($filters['supplier_id'])) {
         $query .= " LEFT JOIN product_supplier ps ON ps.product_id = p.id";
 
@@ -276,7 +284,6 @@ function get_products($filters = [], $order = []) {
         }
     }
 
-    // --- Filtros directos ---
     $map = [
         'category_id' => 'p.category_id',
         'denomination_id' => 'p.denomination_id',
@@ -286,20 +293,20 @@ function get_products($filters = [], $order = []) {
 
     foreach ($map as $filterKey => $columnName) {
         if (isset($filters[$filterKey])) {
-            $filterValue = $filters[$filterKey];
+            $value = $filters[$filterKey];
 
-            if (is_array($filterValue)) {
-                $paramNameList = [];
-                foreach ($filterValue as $index => $singleValue) {
-                    $paramName = ":" . $filterKey . "_" . $index;
-                    $paramNameList[] = $paramName;
-                    $params[$paramName] = $singleValue;
+            if (is_array($value)) {
+                $paramList = [];
+                foreach ($value as $i => $val) {
+                    $paramName = ":${filterKey}_${i}";
+                    $paramList[] = $paramName;
+                    $params[$paramName] = $val;
                 }
-                $conditions[] = "$columnName IN (" . implode(',', $paramNameList) . ")";
+                $conditions[] = "$columnName IN (" . implode(',', $paramList) . ")";
             } else {
-                $paramName = ":" . $filterKey;
+                $paramName = ":$filterKey";
                 $conditions[] = "$columnName = $paramName";
-                $params[$paramName] = $filterValue;
+                $params[$paramName] = $value;
             }
         }
     }
@@ -308,44 +315,63 @@ function get_products($filters = [], $order = []) {
         $query .= " WHERE " . implode(" AND ", $conditions);
     }
 
-    // --- ORDENAMIENTO ---
-    $allowed_order_fields = ['id', 'name', 'price', 'rating', 'iva', 'code', 'category_id'];
-    $order_by = 'p.id';
-    $order_dir = 'ASC';
+    // ========= ORDER =========
+    $allowed = ['id', 'name', 'price', 'rating', 'iva', 'code', 'category_id'];
+    $orderBy = 'p.id';
+    $orderDir = 'ASC';
 
-    if (isset($order['order_by']) && in_array($order['order_by'], $allowed_order_fields)) {
-        $order_by = 'p.' . $order['order_by'];
+    if (isset($order['order_by']) && in_array($order['order_by'], $allowed)) {
+        $orderBy = 'p.' . $order['order_by'];
     }
 
     if (isset($order['order_dir']) && strtoupper($order['order_dir']) === 'DESC') {
-        $order_dir = 'DESC';
+        $orderDir = 'DESC';
     }
 
-    $query .= " ORDER BY $order_by $order_dir";
-
+    $query .= " ORDER BY $orderBy $orderDir";
 
     try {
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // =====================================================
+        // AÑADIR UVAS Y PROMOCIONES DIRECTAMENTE A CADA PRODUCTO
+        // =====================================================
+        foreach ($products as &$product) {
+
+            // ------ UVAS ------
+            $stmtGrapes = $pdo->prepare("
+                SELECT g.id, g.name
+                FROM product_grape pg
+                INNER JOIN grape g ON pg.grape_id = g.id
+                WHERE pg.product_id = :pid
+            ");
+            $stmtGrapes->execute([':pid' => $product['id']]);
+            $product['grape'] = $stmtGrapes->fetchAll(PDO::FETCH_ASSOC);
+
+            // ------ PROMOCIONES ------
+            $stmtPromo = $pdo->prepare("
+                SELECT *
+                FROM promotion
+                WHERE product_id = :pid
+                AND active = 1
+                AND (start_date IS NULL OR start_date <= CURDATE())
+                AND (end_date IS NULL OR end_date >= CURDATE())
+            ");
+
+            $stmtPromo->execute([':pid' => $product['id']]);
+            $product['promotions'] = $stmtPromo->fetchAll(PDO::FETCH_ASSOC);
+        }
+
         return [
             'filters' => $filters,
             'order' => $order,
-            'query_debug' => [
-                'sql' => $query,
-                'params' => $params
-            ],
             'products' => $products
         ];
+
     } catch (PDOException $e) {
         return [
-            'filters' => $filters,
-            'order' => $order,
-            'query_debug' => [
-                'sql' => $query,
-                'params' => $params
-            ],
             'error' => $e->getMessage()
         ];
     }
