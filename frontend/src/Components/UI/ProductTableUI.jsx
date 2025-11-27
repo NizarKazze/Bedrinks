@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tag } from 'lucide-react';
+import { Tag, Funnel } from 'lucide-react';
 
 export const ProductTableHeader = ({ item, label, hasInput, isHidden, setFilters, fetchSearch, addFilter, setProducts }) => {
   const [searchValue, setSearchValue] = useState("");
@@ -113,4 +113,61 @@ export const ShowPromotions = ({product}) => {
   )
 }
 
-const ProductHead = () => {}
+export const ProductHead = ({products}) => {
+  return (
+    <h2 className="font-semibold text-gray-900 flex-shrink-0">
+      Productos
+      <span className="text-main-color ml-2">{products?.length || 0}</span>
+    </h2>
+  )
+}
+
+export const ProductViewController = ({setVisibleColumns, clearFilters, applyCategoryFilter, 
+  setIsFilterPanelCollapsed, isFilterPanelCollapsed, totalActiveFilters}) => {
+
+  const viewTarif = () => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      winery: false,
+      format: false,
+      denomination: false,
+      rating: false,
+      category: false
+    }));
+  };
+
+  const showAllColumns = () => {
+    setVisibleColumns(prev => {
+      const allTrue = {};
+      for (const key in prev) {
+        allTrue[key] = true;
+      }
+      return allTrue;
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2  justify-end min-w-0">
+      <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => viewTarif()}>Tarifas</button>
+      <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(1)}>Vinos</button>
+      <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(13)}>Destilados</button>
+      <button className="bg-gray-100 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => { clearFilters(); showAllColumns(); }}>Resetear Vista</button>
+
+      {isFilterPanelCollapsed && (
+        <button
+          onClick={() => setIsFilterPanelCollapsed(false)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
+          title="Mostrar filtros"
+        >
+          <span className="text-sm text-gray-700 font-medium"><Funnel /></span>
+
+          {totalActiveFilters > 0 && (
+            <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+              {totalActiveFilters}
+            </span>
+          )}
+        </button>
+      )}
+    </div>
+  )
+}

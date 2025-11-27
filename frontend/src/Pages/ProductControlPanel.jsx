@@ -12,6 +12,7 @@ import { ProductsNotFound } from '../Components/UI/UIHelpers';
 
 import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
 import SlidebarNavigation from '../Components/UI/SlidebarNav';
+import { ProductHead, ProductViewController  } from '../Components/UI/ProductTableUI';
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -181,27 +182,6 @@ export default function ProductFilter() {
 
   const toggleProposalExpanded = () => {
     setIsCreatingProposal(prev => !prev);
-  };
-  
-  const viewTarif = () => {
-    setVisibleColumns(prev => ({
-      ...prev,
-      winery: false,
-      format: false,
-      denomination: false,
-      rating: false,
-      category: false
-    }));
-  };
-
-  const showAllColumns = () => {
-    setVisibleColumns(prev => {
-      const allTrue = {};
-      for (const key in prev) {
-        allTrue[key] = true;
-      }
-      return allTrue;
-    });
   };
   
 
@@ -831,33 +811,12 @@ const exportToExcel = (productsToExport) => {
           <div className={` lg:col-span-3 min-w-0 transition-all duration-300 ${isFilterPanelCollapsed ? 'lg:col-span-4' : ''} `}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               
-            <div className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold text-gray-900 flex-shrink-0">
-                Productos
-                <span className="text-main-color ml-2">{products?.length || 0}</span>
-              </h2>
-
-              <div className="flex flex-wrap gap-2  justify-end min-w-0">
-                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => viewTarif()}>Tarifas</button>
-                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(1)}>Vinos</button>
-                <button className="bg-orange-300 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => applyCategoryFilter(13)}>Destilados</button>
-                <button className="bg-gray-100 p-2 rounded-lg text-sm flex-shrink-0" onClick={() => { clearFilters(); showAllColumns(); }}>Resetear Vista</button>
-
-                {isFilterPanelCollapsed && (
-                  <button
-                    onClick={() => setIsFilterPanelCollapsed(false)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
-                    title="Mostrar filtros"
-                  >
-                    <span className="text-sm text-gray-700 font-medium"><Funnel /></span>
-                    {totalActiveFilters > 0 && (
-                      <span className="bg-main-color text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                        {totalActiveFilters}
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
+            <div id='product-head' className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+              <ProductHead products={products}></ProductHead>
+              <ProductViewController setVisibleColumns={setVisibleColumns} clearFilters={clearFilters} 
+                applyCategoryFilter={applyCategoryFilter} setIsFilterPanelCollapsed={setIsFilterPanelCollapsed} 
+                isFilterPanelCollapsed={isFilterPanelCollapsed} totalActiveFilters={totalActiveFilters}
+              ></ProductViewController>
             </div>
 
 
@@ -889,6 +848,7 @@ const exportToExcel = (productsToExport) => {
               </div>
 
               {loading ? (
+
                 <LoadingComponent></LoadingComponent>
                 
               ) : products && products.length === 0 ? (
