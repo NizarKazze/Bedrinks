@@ -112,3 +112,5 @@ export const ShowPromotions = ({product}) => {
   </div>
   )
 }
+
+const ProductHead = () => {}

@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, BottleWine, Download, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, Tag, 
-  ArrowUpDown, ChevronLeft, ChevronRight, House, Pencil, PencilOff, Save, Funnel, Trash2, User, 
-  Calendar, FileText, Plus, History, Package, TriangleAlert, Star} from 'lucide-react';
+import { Search, Download, X, ChevronDown, ChevronUp, ChartNoAxesColumnDecreasing, Tag, 
+  ArrowUpDown, ChevronLeft, Pencil, PencilOff, Save, Funnel, Trash2, User, 
+  FileText, History, Package, TriangleAlert, Star} from 'lucide-react';
 import { useFetch } from '../Hook/useFetch';
 import { usePost } from '../Hook/usePost';
-import Logo from '../assets/BeDrinks-logo.png'
 import * as XLSX from 'xlsx';
 
 import { LoadingComponent } from '../Components/UI/UIHelpers';
@@ -12,6 +11,7 @@ import { ProductTableHeader, ShowPromotions } from '../Components/UI/ProductTabl
 import { ProductsNotFound } from '../Components/UI/UIHelpers';
 
 import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
+import SlidebarNavigation from '../Components/UI/SlidebarNav';
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -23,7 +23,6 @@ export default function ProductFilter() {
   // Propuesta
 
   const [selectedClient, setSelectedClient] = useState(null);
-  const [proposals, setProposals] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [historyClient, setHistoryClient] = useState(null);
   
@@ -60,7 +59,6 @@ export default function ProductFilter() {
   // View controller
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(true);
   const [showOrderSelector, setshowOrderSelector] = useState(false);
 
@@ -748,43 +746,7 @@ const exportToExcel = (productsToExport) => {
   return (
     <div className="min-h-screen flex">
 
-      {/* Sidebar Izquierdo Colapsable */}
-      <div className={`transition-all duration-300 border-r-2 border-gray-200 flex flex-col bg-white ${isSidebarCollapsed ? 'w-16' : 'w-1/4'}`}>
-        <div className="flex items-center justify-between p-4 border-b-2 border-gray-200">
-          {!isSidebarCollapsed && (
-            <div id='logo' className='w-48'>
-              <img src={Logo} alt="" />
-            </div>
-          )}
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title={isSidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
-          >
-            {isSidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-        </div>
-        
-        {isSidebarCollapsed ? (
-          <div className="flex flex-col items-center gap-4 mt-4">
-            <a href="#" className="p-3 hover:bg-gray-100 rounded-lg" title="Panel Principal">
-            <House />
-            </a>
-            <a href="/product-control-panel" className="p-3 hover:bg-gray-100 rounded-lg" title="Gestión de productos">
-            <BottleWine />
-            </a>
-            <button onClick={toggleProposalExpanded} className="p-3 hover:bg-gray-100 rounded-lg" title="Crear Propuesta">
-            <FileText />
-            </button>
-          </div>
-        ) : (
-          <div className="p-4 flex flex-col gap-4">
-            <a href="#" className='mb-4 mt-4'>Panel Principal</a>
-            <a href="/product-control-panel" className='mb-4'>Gestión de productos</a>
-            <button onClick={toggleProposalExpanded}>Crear Propuesta</button>
-          </div>
-        )}
-      </div>
+      <SlidebarNavigation toggleProposalExpanded={toggleProposalExpanded}></SlidebarNavigation>
 
       <div className="w-full mx-auto px-8 mt-6 ">
 
