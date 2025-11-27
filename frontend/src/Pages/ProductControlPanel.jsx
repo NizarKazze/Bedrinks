@@ -13,6 +13,7 @@ import { ProductsNotFound } from '../Components/UI/UIHelpers';
 import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
 import SlidebarNavigation from '../Components/UI/SlidebarNav';
 import { ProductHead, ProductViewController  } from '../Components/UI/ProductTableUI';
+import exportToExcel from '../Components/ExportToExcel';
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -509,7 +510,7 @@ export default function ProductFilter() {
     const findCategoryById = (list, targetId, path = []) => {
       for (const item of list) {
         if (item.id === targetId) {
-          return [...path, item.name]; // encontramos la categoría
+          return [...path, item.name];
         }
         if (item.children && item.children.length > 0) {
           const found = findCategoryById(item.children, targetId, [...path, item.name]);
@@ -551,79 +552,6 @@ const getOptionName = (category, id) => {
     return option?.name || '-';
   }
 };
-
-const exportToExcel = (productsToExport) => {
-  // Validar que hay productos
-  if (!productsToExport || productsToExport.length === 0) {
-    alert('No hay productos para exportar');
-    return;
-  }
-
-  // Preparar los datos para exportar
-  const dataToExport = productsToExport.map(product => {
-    const margenEuros = product.price - product.coste;
-    const margenPorc = product.coste > 0 ? (margenEuros / product.coste) * 100 : 0;
-    const precioPVPIVA = product.price * (1 + (product.iva / 100));
-    
-    return {
-      'Estado': product.estado,
-      'Código': product.code,
-      'Nombre': product.name,
-      'Bodega': getOptionName("wineries", product.winery_id),
-      'Tipo': getOptionName("types", product.category_id),
-      'D.O.': getOptionName("denominations", product.denomination_id),
-      'Añada': getOptionName("vintages", product.vintage_id),
-      'Formato': product.format,
-      'UVA': Array.isArray(product.grape) 
-        ? product.grape.map(g => g.name).join(", ") 
-        : "",
-      'Rating': product.rating,
-      'Precio': product.price,
-      'Coste': product.coste,
-      'MGN€': margenEuros.toFixed(2),
-      'MGN%': margenPorc.toFixed(2),
-      'IVA': product.iva,
-      'TARIFA': precioPVPIVA.toFixed(2)
-    };
-  });
-
-  // Crear el libro de trabajo
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
-
-  // Ajustar anchos de columna
-  const columnWidths = [
-    { wch: 10 }, // Estado
-    { wch: 12 }, // Código
-    { wch: 30 }, // Nombre
-    { wch: 20 }, // Bodega
-    { wch: 15 }, // Tipo
-    { wch: 15 }, // D.O.
-    { wch: 10 }, // Añada
-    { wch: 12 }, // Formato
-    { wch: 25 }, // UVA
-    { wch: 8 },  // Rating
-    { wch: 10 }, // Precio
-    { wch: 10 }, // Coste
-    { wch: 10 }, // MGN€
-    { wch: 10 }, // MGN%
-    { wch: 8 },  // IVA
-    { wch: 12 }  // TARIFA
-  ];
-  worksheet['!cols'] = columnWidths;
-
-  // Generar el archivo con la codificación correcta
-  const fecha = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(workbook, `productos_${fecha}.xlsx`, {
-    bookType: 'xlsx',
-    type: 'binary',
-    bookSST: false,
-    compression: true
-  });
-};
-
-
 
   const totalActiveFilters = Object.values(filters).reduce((acc, arr) => acc + arr.length, 0);
 
@@ -811,19 +739,26 @@ const exportToExcel = (productsToExport) => {
           <div className={` lg:col-span-3 min-w-0 transition-all duration-300 ${isFilterPanelCollapsed ? 'lg:col-span-4' : ''} `}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               
+            {/* Encabezado tabla productos */}
             <div id='product-head' className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+              
               <ProductHead products={products}></ProductHead>
-              <ProductViewController setVisibleColumns={setVisibleColumns} clearFilters={clearFilters} 
-                applyCategoryFilter={applyCategoryFilter} setIsFilterPanelCollapsed={setIsFilterPanelCollapsed} 
-                isFilterPanelCollapsed={isFilterPanelCollapsed} totalActiveFilters={totalActiveFilters}
+              <ProductViewController 
+                setVisibleColumns={setVisibleColumns} 
+                clearFilters={clearFilters} 
+                applyCategoryFilter={applyCategoryFilter} 
+                setIsFilterPanelCollapsed={setIsFilterPanelCollapsed} 
+                isFilterPanelCollapsed={isFilterPanelCollapsed} 
+                totalActiveFilters={totalActiveFilters}
               ></ProductViewController>
+
             </div>
 
 
               <div id='search-container' className='p-4 border-b border-gray-200 flex justify-end'>
                 <div className='flex gap-2'>
                   <button
-                    onClick={() => exportToExcel(products)}
+                    onClick={() => exportToExcel(products, getOptionName)}
                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                   >
                     <Download />

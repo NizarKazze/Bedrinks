@@ -1,7 +1,13 @@
 import * as XLSX from 'xlsx';
 
 // Función para exportar a Excel
-export const exportToExcel = (productsToExport) => {
+const exportToExcel = (productsToExport, getOptionName) => {
+  // Validar que hay productos
+  if (!productsToExport || productsToExport.length === 0) {
+    alert('No hay productos para exportar');
+    return;
+  }
+
   // Preparar los datos para exportar
   const dataToExport = productsToExport.map(product => {
     const margenEuros = product.price - product.coste;
@@ -56,7 +62,14 @@ export const exportToExcel = (productsToExport) => {
   ];
   worksheet['!cols'] = columnWidths;
 
-  // Generar el archivo
+  // Generar el archivo con la codificación correcta
   const fecha = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(workbook, `productos_${fecha}.xlsx`);
+  XLSX.writeFile(workbook, `productos_${fecha}.xlsx`, {
+    bookType: 'xlsx',
+    type: 'binary',
+    bookSST: false,
+    compression: true
+  });
 };
+
+export default exportToExcel
