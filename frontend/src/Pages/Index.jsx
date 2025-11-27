@@ -1,29 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Trash2, Download, FileText, Plus } from 'lucide-react';
+import { ProposalContext } from '../Components/Context/ProposalProvider';
+import { useContext } from "react";
 
-const SistemaPropuestas = () => {
-  const [productos, setProductos] = useState([
-    { id: 1, nombre: 'Producto ejemplo 1', descripcion: 'Descripción detallada del producto', cantidad: 2, precioUnitario: 150.00 },
-    { id: 2, nombre: 'Producto ejemplo 2', descripcion: 'Otra descripción de producto', cantidad: 1, precioUnitario: 300.00 },
-    { id: 3, nombre: 'Producto ejemplo 3', descripcion: 'Más información del producto', cantidad: 5, precioUnitario: 75.00 },
-    { id: 4, nombre: 'Producto ejemplo 4', descripcion: 'Descripción del producto 4', cantidad: 3, precioUnitario: 120.00 },
-    { id: 5, nombre: 'Producto ejemplo 5', descripcion: 'Descripción del producto 5', cantidad: 2, precioUnitario: 200.00 },
-    { id: 6, nombre: 'Producto ejemplo 6', descripcion: 'Descripción del producto 6', cantidad: 1, precioUnitario: 450.00 },
-    { id: 7, nombre: 'Producto ejemplo 7', descripcion: 'Descripción del producto 7', cantidad: 4, precioUnitario: 85.00 },
-    { id: 8, nombre: 'Producto ejemplo 8', descripcion: 'Descripción del producto 8', cantidad: 2, precioUnitario: 175.00 },
-    { id: 9, nombre: 'Producto ejemplo 9', descripcion: 'Descripción del producto 9', cantidad: 6, precioUnitario: 95.00 },
-    { id: 10, nombre: 'Producto ejemplo 10', descripcion: 'Descripción del producto 10', cantidad: 1, precioUnitario: 500.00 },
-    { id: 11, nombre: 'Producto ejemplo 11', descripcion: 'Descripción del producto 11', cantidad: 3, precioUnitario: 140.00 },
-    { id: 12, nombre: 'Producto ejemplo 12', descripcion: 'Descripción del producto 12', cantidad: 2, precioUnitario: 220.00 },
-    { id: 13, nombre: 'Producto ejemplo 13', descripcion: 'Descripción del producto 13', cantidad: 5, precioUnitario: 110.00 },
-    { id: 14, nombre: 'Producto ejemplo 14', descripcion: 'Descripción del producto 14', cantidad: 1, precioUnitario: 380.00 },
-    { id: 15, nombre: 'Producto ejemplo 15', descripcion: 'Descripción del producto 15', cantidad: 4, precioUnitario: 130.00 },
-    { id: 16, nombre: 'Producto ejemplo 16', descripcion: 'Descripción del producto 16', cantidad: 2, precioUnitario: 260.00 },
-    { id: 17, nombre: 'Producto ejemplo 17', descripcion: 'Descripción del producto 17', cantidad: 3, precioUnitario: 190.00 },
-    { id: 18, nombre: 'Producto ejemplo 18', descripcion: 'Descripción del producto 18', cantidad: 1, precioUnitario: 420.00 },
-    { id: 19, nombre: 'Producto ejemplo 19', descripcion: 'Descripción del producto 19', cantidad: 5, precioUnitario: 105.00 },
-    { id: 20, nombre: 'Producto ejemplo 20', descripcion: 'Descripción del producto 20', cantidad: 2, precioUnitario: 315.00 }
-  ]);
+const SistemaPropuestas = ({sele}) => {
+
+  const {
+    selectedClient,
+    setSelectedClient,
+    selectedProducts: productos,
+    setSelectedProducts: setProductos
+  } = useContext(ProposalContext);
 
   const [datosEmpresa, setDatosEmpresa] = useState({
     nombre: 'Mi Empresa S.L.',
@@ -155,13 +142,9 @@ const SistemaPropuestas = () => {
                   {productosEnPagina.length > 0 ? (
                     productosEnPagina.map((producto) => (
                       <tr key={producto.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="p-3 font-medium text-gray-800">{producto.nombre}</td>
-                        <td className="p-3 text-gray-600">{producto.descripcion}</td>
-                        <td className="p-3 text-center text-gray-700">{producto.cantidad}</td>
-                        <td className="p-3 text-right text-gray-700">{producto.precioUnitario.toFixed(2)}€</td>
-                        <td className="p-3 text-right font-semibold text-gray-800">
-                          {(producto.cantidad * producto.precioUnitario).toFixed(2)}€
-                        </td>
+                        <td className="p-3 font-medium text-gray-800">{producto.name}</td>
+                        <td className="p-3 text-gray-600">{producto.description}</td>
+                        <td className="p-3 text-right text-gray-700">{producto.price}€</td>
                         <td className="p-3 text-center print:hidden">
                           <button
                             onClick={() => eliminarProducto(producto.id)}
@@ -182,30 +165,6 @@ const SistemaPropuestas = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Total - Solo en última página */}
-            {indexPagina === paginas.length - 1 && productos.length > 0 && (
-              <div className="mt-auto">
-                <div className="flex justify-end">
-                  <div className="w-72 border-t-2 border-gray-200 pt-4">
-                    <div className="flex justify-between mb-2 text-gray-700">
-                      <span>Subtotal:</span>
-                      <span className="font-semibold">{calcularTotal().toFixed(2)}€</span>
-                    </div>
-                    <div className="flex justify-between mb-3 text-gray-700">
-                      <span>IVA (21%):</span>
-                      <span className="font-semibold">{(calcularTotal() * 0.21).toFixed(2)}€</span>
-                    </div>
-                    <div className="flex justify-between pt-3 border-t-2 border-orange-500">
-                      <span className="font-bold text-lg text-gray-800">TOTAL:</span>
-                      <span className="font-bold text-lg text-orange-600">
-                        {(calcularTotal() * 1.21).toFixed(2)}€
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Pie de página */}
             <div className="absolute bottom-12 left-12 right-12 text-center text-xs text-gray-500 border-t pt-4">

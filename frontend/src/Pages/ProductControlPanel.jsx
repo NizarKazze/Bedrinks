@@ -14,6 +14,10 @@ import { CustomTableHeader } from '../Components/UI/ProposalTableUI';
 import SlidebarNavigation from '../Components/UI/SlidebarNav';
 import { ProductHead, ProductViewController  } from '../Components/UI/ProductTableUI';
 import exportToExcel from '../Components/ExportToExcel';
+import { useContext } from "react";
+import { ProposalContext } from '../Components/Context/ProposalProvider';
+import { useNavigate } from "react-router-dom";
+
 
 export default function ProductFilter() {
   const [products, setProducts] = useState()
@@ -21,11 +25,21 @@ export default function ProductFilter() {
   const [orderBy, setOrderBy] = useState('name')
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const navigate = useNavigate();
+
+  const irAProposalPreview = () => {
+      navigate("/proposal-preview");
+  };
 
   // Propuesta
 
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const {
+    selectedClient,
+    setSelectedClient,
+    selectedProducts,
+    setSelectedProducts
+  } = useContext(ProposalContext);
+
   const [historyClient, setHistoryClient] = useState(null);
   
   const [promoOpenId, setPromoOpenId] = useState(null);
@@ -552,7 +566,6 @@ const getOptionName = (category, id) => {
     return option?.name || '-';
   }
 };
-
   const totalActiveFilters = Object.values(filters).reduce((acc, arr) => acc + arr.length, 0);
 
   const fetchSearch = async (table, search) => {
@@ -1385,6 +1398,7 @@ const getOptionName = (category, id) => {
                     >
                       Guardar Propuesta
                     </button>
+<button onClick={irAProposalPreview}>Ir a Proposal Preview</button>
                   </div>
                 </>
               )}
